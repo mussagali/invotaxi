@@ -10,6 +10,8 @@ frontend/node_modules/
 frontend/dist/
 app/.dart_tool/
 app/build/
+app/release/*.apk
+app/release/*.aab
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/.packages
