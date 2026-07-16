@@ -45,6 +45,7 @@ NORTH_BANK_ANCHORS = (
 )
 
 ATYRAU_BBOX = (46.85, 47.35, 51.55, 52.15)
+KAZAKHSTAN_BBOX = (40.45, 55.50, 46.40, 87.40)
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -91,6 +92,11 @@ def bank_of(lat: float, lon: float) -> str:
 
 
 def in_bbox(lat: float, lon: float) -> bool:
+    lat_min, lat_max, lon_min, lon_max = KAZAKHSTAN_BBOX
+    return lat_min <= lat <= lat_max and lon_min <= lon <= lon_max
+
+
+def in_atyrau_bbox(lat: float, lon: float) -> bool:
     lat_min, lat_max, lon_min, lon_max = ATYRAU_BBOX
     return lat_min <= lat <= lat_max and lon_min <= lon <= lon_max
 
@@ -101,6 +107,8 @@ class AtyrauDistanceProvider(DistanceProvider):
         self.winding = winding
 
     def distance_km(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        if not (in_atyrau_bbox(lat1, lon1) and in_atyrau_bbox(lat2, lon2)):
+            return haversine_km(lat1, lon1, lat2, lon2) * self.winding
         if bank_of(lat1, lon1) == bank_of(lat2, lon2):
             return haversine_km(lat1, lon1, lat2, lon2) * self.winding
         return min(

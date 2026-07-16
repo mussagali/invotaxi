@@ -117,9 +117,6 @@ export function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         {/* User Info */}
         {user && (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-700 dark:bg-indigo-600 flex items-center justify-center">
-              {user.name[0]}
-            </div>
             <div className="flex-1">
               <p className="text-sm">{user.name}</p>
               <p className="text-xs text-indigo-300 dark:text-gray-400">

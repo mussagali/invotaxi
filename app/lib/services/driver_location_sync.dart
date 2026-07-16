@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:geolocator/geolocator.dart';
-
 import '../api/backend_api.dart';
+import 'location_context_service.dart';
 
 class DriverLocationSync {
   DriverLocationSync(this.api);
@@ -12,16 +11,18 @@ class DriverLocationSync {
   bool _sending = false;
 
   Future<void> start() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return;
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
+    try {
+      await PreciseLocationService.ensurePermission();
+    } on LocationContextException {
       return;
     }
     await api.setDriverOnline(true);
+    try {
+      final context = await LocationContextService.detectCurrentCity();
+      await api.updateDriverRegion(context.cityName);
+    } catch (_) {
+      // GPS pings still work if reverse geocoding is temporarily unavailable.
+    }
     await _sendOnce();
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 7), (_) => _sendOnce());
@@ -31,11 +32,9 @@ class DriverLocationSync {
     if (_sending) return;
     _sending = true;
     try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.bestForNavigation,
-          timeLimit: Duration(seconds: 12),
-        ),
+      final position = await PreciseLocationService.bestCurrentPosition(
+        initialTimeout: const Duration(seconds: 12),
+        refineFor: const Duration(seconds: 4),
       );
       // The server enforces the same boundary. Never label a coarse fix as precise.
       if (position.accuracy > 5) return;

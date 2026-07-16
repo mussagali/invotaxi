@@ -3,13 +3,14 @@
 import uuid
 from typing import Annotated, Any, NoReturn
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, get_redis, get_token_payload, require_roles
-from app.domain.enums import UserRole
-from app.domain.models import User
+from app.domain.enums import UserRole, UserStatus
+from app.domain.models import Driver, User
 from app.domain.schemas import (
     DriverMeOut,
     DriverOut,
@@ -123,7 +124,18 @@ async def list_drivers(
         limit=limit,
         offset=offset,
     )
-    return [DriverOut.model_validate(driver) for driver in drivers]
+    phones = {
+        user.id: user.phone
+        for user in await session.scalars(
+            select(User).where(User.id.in_({driver.user_id for driver in drivers}))
+        )
+    }
+    return [
+        DriverOut.model_validate(driver).model_copy(
+            update={"phone": phones.get(driver.user_id)}
+        )
+        for driver in drivers
+    ]
 
 
 @router.patch("/{driver_id}", response_model=DriverOut)
@@ -138,4 +150,30 @@ async def patch_driver(
         driver = await DriversService(session, redis).patch(driver_id, body)
     except DriverServiceError as exc:
         _raise_service_error(exc)
-    return DriverOut.model_validate(driver)
+    user = await session.get(User, driver.user_id)
+    return DriverOut.model_validate(driver).model_copy(
+        update={"phone": user.phone if user else None}
+    )
+
+
+@router.delete("/{driver_id}", status_code=204)
+async def archive_driver(
+    driver_id: uuid.UUID,
+    actor: Annotated[User, Depends(require_roles(UserRole.admin))],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[Redis, Depends(get_redis)],
+) -> Response:
+    """Archive a driver account while preserving completed route history."""
+    driver = await session.get(Driver, driver_id)
+    user = await session.get(User, driver_id)
+    if driver is None or user is None or user.role != UserRole.driver:
+        raise HTTPException(status_code=404, detail="driver not found")
+    driver.is_online = False
+    user.status = UserStatus.blocked
+    await session.commit()
+    pipe = redis.pipeline()
+    pipe.srem("drivers:online", str(driver_id))
+    pipe.zrem("drivers:live", str(driver_id))
+    pipe.delete(f"driver:pos:{driver_id}", f"driver:meta:{driver_id}")
+    await pipe.execute()
+    return Response(status_code=204)

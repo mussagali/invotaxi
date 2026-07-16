@@ -293,32 +293,6 @@ class RatingStars extends StatelessWidget {
   }
 }
 
-class Avatar extends StatelessWidget {
-  const Avatar({super.key, this.asset, this.radius = 22, this.initials});
-  final String? asset;
-  final double radius;
-  final String? initials;
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    if (asset != null) {
-      return CircleAvatar(radius: radius, backgroundImage: AssetImage(asset!));
-    }
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: p.brandSoft,
-      child: Text(
-        initials ?? '',
-        style: TextStyle(
-          color: p.brand,
-          fontWeight: FontWeight.w700,
-          fontSize: radius * 0.7,
-        ),
-      ),
-    );
-  }
-}
-
 /// Section title used above form groups.
 class SectionLabel extends StatelessWidget {
   const SectionLabel(this.text, {super.key, this.padding});

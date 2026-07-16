@@ -113,6 +113,8 @@ class OrdersService:
         actor: User,
         *,
         service_date: date | None,
+        service_date_from: date | None,
+        service_date_to: date | None,
         status: OrderStatus | None,
         district: str | None,
         client_id: uuid.UUID | None,
@@ -126,6 +128,8 @@ class OrdersService:
             driver_id = actor.id
         return await self.repo.list(
             service_date=service_date,
+            service_date_from=service_date_from,
+            service_date_to=service_date_to,
             status=status,
             district=district,
             client_id=client_id,

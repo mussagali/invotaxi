@@ -109,6 +109,25 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfileName(String fullName) async {
+    final normalized = fullName.trim();
+    if (normalized.isEmpty) {
+      throw const ApiException('Введите имя');
+    }
+    busy = true;
+    lastError = null;
+    notifyListeners();
+    try {
+      session = await api.updateProfileName(normalized);
+    } on ApiException catch (error) {
+      lastError = error.message;
+      rethrow;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
   void _syncOrderState() {
     final active = _orders.cast<Map<String, dynamic>?>().firstWhere(
       (item) =>

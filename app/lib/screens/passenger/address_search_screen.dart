@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_palette.dart';
 import '../../models/models.dart';
 import '../../services/address_suggest_service.dart';
+import '../../services/location_context_service.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/common.dart';
 
@@ -13,10 +14,12 @@ class AddressSearchScreen extends StatefulWidget {
     required this.from,
     required this.to,
     required this.editingFrom,
+    required this.locationContext,
   });
   final String from;
   final String to;
   final bool editingFrom;
+  final CityLocationContext locationContext;
 
   @override
   State<AddressSearchScreen> createState() => _AddressSearchScreenState();
@@ -43,7 +46,10 @@ class _AddressSearchScreenState extends State<AddressSearchScreen> {
     }
     _debounce = Timer(const Duration(milliseconds: 350), () async {
       setState(() => _loading = true);
-      final results = await AddressSuggestService.search(value);
+      final results = await AddressSuggestService.search(
+        value,
+        widget.locationContext,
+      );
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -98,6 +104,35 @@ class _AddressSearchScreenState extends State<AddressSearchScreen> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 2, 18, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.location_city, size: 17, color: p.brand),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      'Адреса только в городе ${widget.locationContext.cityName}',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: p.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    widget.locationContext.accuracyLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: widget.locationContext.isFiveMeterFix
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 4),
             Expanded(
               child: _loading
@@ -142,7 +177,10 @@ class _AddressSearchScreenState extends State<AddressSearchScreen> {
                           onTap: () async {
                             setState(() => _loading = true);
                             final resolved =
-                                await AddressSuggestService.resolve(place);
+                                await AddressSuggestService.resolve(
+                                  place,
+                                  widget.locationContext,
+                                );
                             if (!context.mounted) return;
                             if (resolved == null) {
                               setState(() => _loading = false);

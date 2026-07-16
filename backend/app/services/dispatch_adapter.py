@@ -8,14 +8,14 @@ from typing import Any
 
 from app.domain.models import Driver, Order
 from app.domain.schemas import (
-    ATYRAU_LAT_MAX,
-    ATYRAU_LAT_MIN,
-    ATYRAU_LON_MAX,
-    ATYRAU_LON_MIN,
+    KAZAKHSTAN_LAT_MAX,
+    KAZAKHSTAN_LAT_MIN,
+    KAZAKHSTAN_LON_MAX,
+    KAZAKHSTAN_LON_MIN,
 )
 from routing import DriverIn, EngineConfig, OrderIn
 
-DISTRICT_FALLBACK = (47.10, 51.90)
+KAZAKHSTAN_FALLBACK = (48.0196, 66.9237)
 
 
 @dataclass(slots=True)
@@ -38,8 +38,8 @@ def _in_bbox(lat: float | None, lon: float | None) -> bool:
     return (
         lat is not None
         and lon is not None
-        and ATYRAU_LAT_MIN <= lat <= ATYRAU_LAT_MAX
-        and ATYRAU_LON_MIN <= lon <= ATYRAU_LON_MAX
+        and KAZAKHSTAN_LAT_MIN <= lat <= KAZAKHSTAN_LAT_MAX
+        and KAZAKHSTAN_LON_MIN <= lon <= KAZAKHSTAN_LON_MAX
     )
 
 
@@ -70,11 +70,21 @@ def adapt_dispatch(
         if _in_bbox(driver.home_lat, driver.home_lon):
             assert driver.home_lat is not None and driver.home_lon is not None
             valid_starts.append((driver.home_lat, driver.home_lon))
+    valid_order_points = [
+        (order.pickup_lat, order.pickup_lon)
+        for order in orders
+        if _in_bbox(order.pickup_lat, order.pickup_lon)
+        and order.pickup_lat is not None
+        and order.pickup_lon is not None
+    ]
     if valid_starts:
         fallback_lat = sum(item[0] for item in valid_starts) / len(valid_starts)
         fallback_lon = sum(item[1] for item in valid_starts) / len(valid_starts)
+    elif valid_order_points:
+        fallback_lat = sum(item[0] for item in valid_order_points) / len(valid_order_points)
+        fallback_lon = sum(item[1] for item in valid_order_points) / len(valid_order_points)
     else:
-        fallback_lat, fallback_lon = DISTRICT_FALLBACK
+        fallback_lat, fallback_lon = KAZAKHSTAN_FALLBACK
 
     anomalies: list[dict[str, Any]] = []
     driver_inputs: list[DriverIn] = []

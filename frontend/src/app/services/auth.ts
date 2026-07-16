@@ -11,12 +11,13 @@ export interface EmailLoginRequest { email: string; password: string }
 
 function adaptLogin(data: any): LoginResponse {
   const backendRole = data.user.role as string;
+  const defaultName = backendRole === "admin" ? "Администратор" : "Диспетчер";
   return {
     access: data.tokens.access_token,
     refresh: data.tokens.refresh_token,
     user: {
       id: data.user.id,
-      username: backendRole === "admin" ? "Администратор" : "Диспетчер",
+      username: data.user.full_name || defaultName,
       email: "",
       phone: data.user.phone,
       role: backendRole,
@@ -44,7 +45,7 @@ export const authApi = {
     const { data } = await api.get("/auth/me");
     return {
       id: data.user.id,
-      username: data.user.role === "admin" ? "Администратор" : "Диспетчер",
+      username: data.user.full_name || (data.user.role === "admin" ? "Администратор" : "Диспетчер"),
       email: "",
       phone: data.user.phone,
       role: data.user.role,

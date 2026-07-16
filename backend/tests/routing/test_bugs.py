@@ -185,7 +185,7 @@ def test_validator_reports_capacity_and_partition() -> None:
 
 def test_validator_reports_duplicate_window_and_bbox() -> None:
     item = order("a", 600)
-    bad = Stop(item.id, 48.0, 51.9, 700)
+    bad = Stop(item.id, 39.0, 51.9, 700)
     block = Block("trip", (item.id,), (bad,), (bad,), 700, 710)
     solution = Solution(
         {"d": [block, block]},

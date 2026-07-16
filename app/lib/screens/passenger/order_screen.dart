@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_palette.dart';
 import '../../state/app_scope.dart';
 import '../../models/models.dart';
+import '../../services/location_context_service.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/common.dart';
 import '../../widgets/map_background.dart';
@@ -24,12 +25,64 @@ class _OrderScreenState extends State<OrderScreen> {
   double? _dropoffLon;
   bool _escort = false;
   DateTime? _scheduledAt;
+  CityLocationContext? _locationContext;
+  bool _detectingLocation = true;
+  String? _locationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _detectCurrentLocation();
+  }
+
+  Future<void> _detectCurrentLocation({bool force = false}) async {
+    setState(() {
+      _detectingLocation = true;
+      _locationError = null;
+    });
+    try {
+      final location = await LocationContextService.detectCurrentCity(
+        force: force,
+      );
+      if (!mounted) return;
+      setState(() {
+        _locationContext = location;
+        _from = location.currentAddress;
+        _pickupLat = location.position.latitude;
+        _pickupLon = location.position.longitude;
+        _detectingLocation = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _detectingLocation = false;
+        _locationError = error.toString();
+      });
+    }
+  }
 
   Future<void> _pick(bool isFrom) async {
+    var location = _locationContext;
+    if (location == null) {
+      await _detectCurrentLocation(force: true);
+      if (!mounted) return;
+      location = _locationContext;
+    }
+    if (location == null) {
+      showToast(
+        context,
+        _locationError ?? 'Не удалось определить текущий город',
+      );
+      return;
+    }
     final result = await Navigator.of(context).push<Place>(
       MaterialPageRoute(
-        builder: (_) =>
-            AddressSearchScreen(from: _from, to: _to, editingFrom: isFrom),
+        builder: (_) => AddressSearchScreen(
+          from: _from,
+          to: _to,
+          editingFrom: isFrom,
+          locationContext: location!,
+        ),
       ),
     );
     if (result != null) {
@@ -128,6 +181,84 @@ class _OrderScreenState extends State<OrderScreen> {
                         'Куда едем?',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
+                      const SizedBox(height: 8),
+                      if (_detectingLocation)
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: p.brand,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Определяем город и точный адрес…',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: p.textSecondary,
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (_locationContext case final location?)
+                        Row(
+                          children: [
+                            Icon(Icons.my_location, size: 16, color: p.brand),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                location.cityName,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: p.textSecondary,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              location.accuracyLabel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: location.isFiveMeterFix
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              tooltip: 'Уточнить местоположение',
+                              onPressed: () =>
+                                  _detectCurrentLocation(force: true),
+                              icon: const Icon(Icons.refresh, size: 18),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _locationError ??
+                                    'Не удалось определить геопозицию',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.redAccent,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _detectCurrentLocation(force: true),
+                              child: const Text('Повторить'),
+                            ),
+                          ],
+                        ),
                       const SizedBox(height: 16),
                       _AddressField(
                         icon: Icons.my_location,

@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.domain.enums import UserRole
-from app.domain.models import ClientProfile, Order, User
+from app.domain.models import ClientProfile, Driver, Order, User
 
 AppClient = tuple[FastAPI, httpx.AsyncClient]
 
@@ -22,6 +22,15 @@ async def _create_user(app: FastAPI, phone: str, role: UserRole) -> uuid.UUID:
         await session.flush()
         if role == UserRole.client:
             session.add(ClientProfile(user_id=user.id, full_name="Test Client"))
+        elif role == UserRole.driver:
+            session.add(
+                Driver(
+                    user_id=user.id,
+                    full_name="Test Driver",
+                    region="Атырау",
+                    capacity=4,
+                )
+            )
         user_id = user.id
         await session.commit()
     return user_id
@@ -50,6 +59,62 @@ async def test_login_me_and_phone_normalization(app_with_client: AppClient) -> N
     assert me.status_code == 200
     assert me.json()["user"]["phone"] == "7031000001"
     assert me.json()["client_profile"]["full_name"] == "Test Client"
+
+
+async def test_user_can_update_own_profile_name(app_with_client: AppClient) -> None:
+    app, client = app_with_client
+    user_id = await _create_user(app, "7031000099", UserRole.client)
+    login = await _login(client, "7031000099")
+    access = login.json()["tokens"]["access_token"]
+    headers = {"Authorization": f"Bearer {access}"}
+
+    updated = await client.patch(
+        "/api/v1/auth/me",
+        json={"full_name": "  Новое Имя  "},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["user"]["full_name"] == "Новое Имя"
+    assert updated.json()["client_profile"]["full_name"] == "Новое Имя"
+
+    async with app.state.session_factory() as session:
+        user = await session.get(User, user_id)
+        profile = await session.get(ClientProfile, user_id)
+        assert user is not None and user.full_name == "Новое Имя"
+        assert profile is not None and profile.full_name == "Новое Имя"
+
+
+async def test_driver_can_update_detected_city(app_with_client: AppClient) -> None:
+    app, client = app_with_client
+    user_id = await _create_user(app, "7031000098", UserRole.driver)
+    login = await _login(client, "7031000098")
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    updated = await client.patch(
+        "/api/v1/auth/me",
+        json={"region": "Астана"},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["driver_profile"]["region"] == "Астана"
+
+    async with app.state.session_factory() as session:
+        driver = await session.get(Driver, user_id)
+        assert driver is not None and driver.region == "Астана"
+
+
+async def test_client_cannot_update_driver_region(app_with_client: AppClient) -> None:
+    app, client = app_with_client
+    await _create_user(app, "7031000097", UserRole.client)
+    login = await _login(client, "7031000097")
+    headers = {"Authorization": f"Bearer {login.json()['tokens']['access_token']}"}
+
+    updated = await client.patch(
+        "/api/v1/auth/me",
+        json={"region": "Алматы"},
+        headers=headers,
+    )
+    assert updated.status_code == 422
 
 
 async def test_login_wrong_password_401(app_with_client: AppClient) -> None:

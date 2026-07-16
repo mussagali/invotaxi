@@ -15,10 +15,13 @@ from app.domain.enums import (
     UserStatus,
 )
 
-ATYRAU_LAT_MIN = 46.85
-ATYRAU_LAT_MAX = 47.35
-ATYRAU_LON_MIN = 51.55
-ATYRAU_LON_MAX = 52.15
+# Geographic envelope of Kazakhstan with a small border tolerance. City-level
+# restrictions belong to the client search context, while the API must accept
+# legitimate trips and telemetry from every city in the country.
+KAZAKHSTAN_LAT_MIN = 40.45
+KAZAKHSTAN_LAT_MAX = 55.50
+KAZAKHSTAN_LON_MIN = 46.40
+KAZAKHSTAN_LON_MAX = 87.40
 
 
 class LoginRequest(BaseModel):
@@ -45,6 +48,7 @@ class UserOut(BaseModel):
 
     id: uuid.UUID
     phone: str
+    full_name: str | None = None
     role: UserRole
     status: UserStatus
 
@@ -105,6 +109,17 @@ class MeResponse(BaseModel):
     driver_profile: DriverProfileOut | None = None
 
 
+class MePatch(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    region: str | None = Field(default=None, min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def is_not_empty(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("at least one profile field is required")
+        return self
+
+
 class LoginResponse(BaseModel):
     tokens: TokenPair
     user: UserOut
@@ -154,26 +169,26 @@ class CreateUserResponse(BaseModel):
     user: UserOut
 
 
-class _AtyrauCoordinates(BaseModel):
+class _KazakhstanCoordinates(BaseModel):
     pickup_lat: float | None = None
     pickup_lon: float | None = None
     dropoff_lat: float | None = None
     dropoff_lon: float | None = None
 
     @model_validator(mode="after")
-    def coordinates_are_in_atyrau(self) -> Self:
+    def coordinates_are_in_kazakhstan(self) -> Self:
         for name in ("pickup_lat", "dropoff_lat"):
             value = getattr(self, name)
-            if value is not None and not ATYRAU_LAT_MIN <= value <= ATYRAU_LAT_MAX:
-                raise ValueError(f"{name} is outside Atyrau bbox (46.85..47.35)")
+            if value is not None and not KAZAKHSTAN_LAT_MIN <= value <= KAZAKHSTAN_LAT_MAX:
+                raise ValueError(f"{name} is outside Kazakhstan")
         for name in ("pickup_lon", "dropoff_lon"):
             value = getattr(self, name)
-            if value is not None and not ATYRAU_LON_MIN <= value <= ATYRAU_LON_MAX:
-                raise ValueError(f"{name} is outside Atyrau bbox (51.55..52.15)")
+            if value is not None and not KAZAKHSTAN_LON_MIN <= value <= KAZAKHSTAN_LON_MAX:
+                raise ValueError(f"{name} is outside Kazakhstan")
         return self
 
 
-class OrderCreate(_AtyrauCoordinates):
+class OrderCreate(_KazakhstanCoordinates):
     client_id: uuid.UUID | None = None
     service_date: date
     desired_time: time
@@ -182,7 +197,7 @@ class OrderCreate(_AtyrauCoordinates):
     escort: bool = False
 
 
-class OrderPatch(_AtyrauCoordinates):
+class OrderPatch(_KazakhstanCoordinates):
     desired_time: time | None = None
     pickup_addr: str | None = Field(default=None, max_length=1000)
     dropoff_addr: str | None = Field(default=None, max_length=1000)
@@ -242,7 +257,7 @@ class TwinOrderRequest(BaseModel):
     other_order_id: uuid.UUID
 
 
-class LegacyOrderImportRow(_AtyrauCoordinates):
+class LegacyOrderImportRow(_KazakhstanCoordinates):
     fio: str = Field(min_length=1, max_length=200)
     from_addr: str = Field(min_length=1, max_length=1000)
     to_addr: str = Field(min_length=1, max_length=1000)
@@ -266,6 +281,7 @@ class ImportReport(BaseModel):
 
 class DriverOut(DriverProfileOut):
     user_id: uuid.UUID
+    phone: str | None = None
 
 
 class DriverShiftOut(BaseModel):
@@ -288,6 +304,8 @@ class DriverPatch(BaseModel):
     is_online: bool | None = None
     shift_start: time | None = None
     shift_end: time | None = None
+    home_lat: float | None = Field(default=None, ge=-90, le=90)
+    home_lon: float | None = Field(default=None, ge=-180, le=180)
 
     @model_validator(mode="after")
     def is_not_empty(self) -> Self:

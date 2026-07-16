@@ -92,7 +92,7 @@ export interface PaginatedResponse<T> {
 function adaptDriver(raw: any, position?: any): Driver {
   return {
     id: raw.user_id as any,
-    user: { id: raw.user_id as any, username: raw.full_name, phone: "" },
+    user: { id: raw.user_id as any, username: raw.full_name, phone: raw.phone || "" },
     name: raw.full_name,
     region: {
       id: raw.region || "Атырау",
@@ -189,8 +189,11 @@ export const driversApi = {
    * Обновить позицию водителя
    */
   async updateLocation(driverId: number, data: UpdateLocationRequest): Promise<Driver> {
-    const response = await api.patch<Driver>(`/drivers/${driverId}/location/`, data);
-    return response.data;
+    const response = await api.patch(`/drivers/${driverId}`, {
+      home_lat: data.lat,
+      home_lon: data.lon,
+    });
+    return adaptDriver(response.data);
   },
 
   /**
@@ -233,7 +236,7 @@ export const driversApi = {
    * Удалить водителя
    */
   async deleteDriver(driverId: number): Promise<void> {
-    await api.delete(`/drivers/${driverId}/`);
+    await api.delete(`/drivers/${driverId}`);
   },
 
   /**

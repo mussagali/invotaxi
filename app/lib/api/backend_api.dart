@@ -123,6 +123,15 @@ class BackendApi {
     );
   }
 
+  Future<BackendSession> updateProfileName(String fullName) async {
+    await _request('PATCH', '/auth/me', body: {'full_name': fullName.trim()});
+    return getSession();
+  }
+
+  Future<void> updateDriverRegion(String region) async {
+    await _request('PATCH', '/auth/me', body: {'region': region.trim()});
+  }
+
   Future<List<Map<String, dynamic>>> listOrders() async {
     final body = await _request('GET', '/orders?limit=100');
     return (body as List)

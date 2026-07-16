@@ -61,6 +61,7 @@ class User(TimestampMixin, Base):
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     phone: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    full_name: Mapped[str | None] = mapped_column(Text)
     password_hash: Mapped[str] = mapped_column(Text)
     role: Mapped[UserRole] = mapped_column(user_role)
     status: Mapped[UserStatus] = mapped_column(

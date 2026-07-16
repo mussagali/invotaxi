@@ -25,6 +25,7 @@ from app.domain.schemas import (
     DriverProfileOut,
     LoginRequest,
     LoginResponse,
+    MePatch,
     MeResponse,
     RefreshRequest,
     TokenPair,
@@ -87,14 +88,24 @@ async def dev_login(
     role = UserRole(body.role)
     user = await session.scalar(select(User).where(User.phone == phone))
     if user is None:
-        user = User(phone=phone, password_hash=hash_password(body.password), role=role)
+        default_name = {
+            UserRole.client: f"Клиент {phone[-4:]}",
+            UserRole.driver: f"Водитель {phone[-4:]}",
+            UserRole.dispatcher: f"Диспетчер {phone[-4:]}",
+        }[role]
+        user = User(
+            phone=phone,
+            full_name=default_name,
+            password_hash=hash_password(body.password),
+            role=role,
+        )
         session.add(user)
         await session.flush()
         if role == UserRole.client:
             session.add(
                 ClientProfile(
                     user_id=user.id,
-                    full_name=f"Клиент {phone[-4:]}",
+                    full_name=default_name,
                     needs_escort=False,
                 )
             )
@@ -102,7 +113,7 @@ async def dev_login(
             session.add(
                 Driver(
                     user_id=user.id,
-                    full_name=f"Водитель {phone[-4:]}",
+                    full_name=default_name,
                     region="Атырау",
                     capacity=4,
                 )
@@ -167,6 +178,50 @@ async def me(
     elif user.role == UserRole.driver:
         dp = await session.get(Driver, user.id)
         driver_profile = DriverProfileOut.model_validate(dp) if dp else None
+    return MeResponse(
+        user=UserOut.model_validate(user),
+        client_profile=client_profile,
+        driver_profile=driver_profile,
+    )
+
+
+@router.patch("/me", response_model=MeResponse)
+async def update_me(
+    body: MePatch,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> MeResponse:
+    """Update the current user's display name in the canonical profile."""
+    full_name = body.full_name.strip() if body.full_name is not None else None
+    region = body.region.strip() if body.region is not None else None
+    if body.full_name is not None and not full_name:
+        raise HTTPException(status_code=422, detail="full_name must not be blank")
+    if body.region is not None and not region:
+        raise HTTPException(status_code=422, detail="region must not be blank")
+    if region is not None and user.role != UserRole.driver:
+        raise HTTPException(status_code=422, detail="region is only available for drivers")
+
+    if full_name is not None:
+        user.full_name = full_name
+    client_profile = driver_profile = None
+    if user.role == UserRole.client:
+        client = await session.get(ClientProfile, user.id)
+        if client is None:
+            raise HTTPException(status_code=409, detail="client profile is missing")
+        if full_name is not None:
+            client.full_name = full_name
+        client_profile = ClientProfileOut.model_validate(client)
+    elif user.role == UserRole.driver:
+        driver = await session.get(Driver, user.id)
+        if driver is None:
+            raise HTTPException(status_code=409, detail="driver profile is missing")
+        if full_name is not None:
+            driver.full_name = full_name
+        if region is not None:
+            driver.region = region
+        driver_profile = DriverProfileOut.model_validate(driver)
+
+    await session.commit()
     return MeResponse(
         user=UserOut.model_validate(user),
         client_profile=client_profile,
@@ -251,7 +306,17 @@ async def create_user(
     if existing is not None:
         raise HTTPException(status_code=409, detail="phone already registered")
 
-    user = User(phone=phone, password_hash=hash_password(body.password), role=body.role)
+    profile_name = None
+    if body.client_profile is not None:
+        profile_name = body.client_profile.full_name
+    elif body.driver_profile is not None:
+        profile_name = body.driver_profile.full_name
+    user = User(
+        phone=phone,
+        full_name=profile_name,
+        password_hash=hash_password(body.password),
+        role=body.role,
+    )
     session.add(user)
     await session.flush()
 

@@ -118,6 +118,27 @@ async def test_create_and_list_orders_with_limits(app_with_client: AppClient) ->
     assert too_many.status_code == 422
 
 
+async def test_create_order_accepts_coordinates_outside_atyrau(
+    app_with_client: AppClient,
+) -> None:
+    app, client = app_with_client
+    await _create_user(app, "7103000098", UserRole.client)
+    headers = await _headers(client, "7103000098")
+
+    order = await _create_order(
+        client,
+        headers,
+        pickup_addr="Астана, проспект Республики",
+        dropoff_addr="Астана, улица Кунаева",
+        pickup_lat=51.1694,
+        pickup_lon=71.4491,
+        dropoff_lat=51.1282,
+        dropoff_lon=71.4304,
+    )
+    assert order["pickup_lat"] == 51.1694
+    assert order["dropoff_lon"] == 71.4304
+
+
 async def test_get_hides_foreign_order_and_checks_published_driver_plan(
     app_with_client: AppClient,
 ) -> None:
@@ -245,7 +266,7 @@ async def test_patch_updates_seats_and_hides_foreign_order(app_with_client: AppC
         f"/api/v1/orders/{order['id']}", json={"pickup_lat": 0}, headers=owner_headers
     )
     assert bad_bbox.status_code == 422
-    assert "Atyrau bbox" in bad_bbox.json()["error"]["message"]
+    assert "outside Kazakhstan" in bad_bbox.json()["error"]["message"]
 
 
 async def test_cancel_writes_event_and_requires_reason(app_with_client: AppClient) -> None:

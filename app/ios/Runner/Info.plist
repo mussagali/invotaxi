@@ -27,7 +27,12 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Геопозиция нужна для передачи точного положения водителя диспетчеру.</string>
+	<string>Точная геопозиция нужна для определения города и адреса пассажира, а также для передачи положения водителя диспетчеру.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>PrecisePickupLocation</key>
+		<string>Точные координаты нужны, чтобы определить адрес подачи с точностью до нескольких метров.</string>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -9,10 +9,10 @@ import structlog
 from redis.asyncio import Redis
 
 from app.domain.schemas import (
-    ATYRAU_LAT_MAX,
-    ATYRAU_LAT_MIN,
-    ATYRAU_LON_MAX,
-    ATYRAU_LON_MIN,
+    KAZAKHSTAN_LAT_MAX,
+    KAZAKHSTAN_LAT_MIN,
+    KAZAKHSTAN_LON_MAX,
+    KAZAKHSTAN_LON_MIN,
     DriverPositionOut,
     TelemetryIngestOut,
     TelemetryPoint,
@@ -122,8 +122,8 @@ class TelemetryService:
         inaccurate: list[TelemetryPoint] = []
         for point in points:
             in_bbox = (
-                ATYRAU_LAT_MIN <= point.lat <= ATYRAU_LAT_MAX
-                and ATYRAU_LON_MIN <= point.lon <= ATYRAU_LON_MAX
+                KAZAKHSTAN_LAT_MIN <= point.lat <= KAZAKHSTAN_LAT_MAX
+                and KAZAKHSTAN_LON_MIN <= point.lon <= KAZAKHSTAN_LON_MAX
             )
             if not in_bbox:
                 anomalies.append(point)
@@ -195,14 +195,14 @@ class TelemetryService:
     async def live_positions(self, online_driver_ids: set[uuid.UUID]) -> list[DriverPositionOut]:
         if not online_driver_ids:
             return []
-        center_lon = (ATYRAU_LON_MIN + ATYRAU_LON_MAX) / 2
-        center_lat = (ATYRAU_LAT_MIN + ATYRAU_LAT_MAX) / 2
+        center_lon = (KAZAKHSTAN_LON_MIN + KAZAKHSTAN_LON_MAX) / 2
+        center_lat = (KAZAKHSTAN_LAT_MIN + KAZAKHSTAN_LAT_MAX) / 2
         members: list[str] = await self.redis.geosearch(
             LIVE_GEO_KEY,
             longitude=center_lon,
             latitude=center_lat,
-            width=46,
-            height=56,
+            width=3500,
+            height=1800,
             unit="km",
         )
         selected = [

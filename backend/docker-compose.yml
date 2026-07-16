@@ -17,7 +17,10 @@ services:
 
   api:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >-
+      sh -c "alembic upgrade head &&
+      python scripts/seed_access_users.py &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     env_file: .env
     volumes:
       - ./app:/app/app

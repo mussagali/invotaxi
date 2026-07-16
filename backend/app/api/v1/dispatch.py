@@ -28,7 +28,7 @@ from app.services.dispatch import DispatchService, DispatchServiceError
 from app.services.plans import PlanServiceError, PlansService
 
 router = APIRouter(tags=["dispatch"])
-dispatcher = require_roles(UserRole.dispatcher)
+dispatcher = require_roles(UserRole.dispatcher, UserRole.admin)
 
 
 def _raise_error(exc: DispatchServiceError | PlanServiceError) -> NoReturn:

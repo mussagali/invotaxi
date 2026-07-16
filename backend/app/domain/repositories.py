@@ -6,7 +6,7 @@ from datetime import date
 from sqlalchemy import delete, func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.enums import OrderStatus, PlanStatus, RoutingJobStatus
+from app.domain.enums import OrderStatus, PlanStatus, RoutingJobStatus, UserStatus
 from app.domain.models import (
     Driver,
     DriverLunch,
@@ -14,6 +14,7 @@ from app.domain.models import (
     RouteAssignment,
     RoutePlan,
     RoutingJob,
+    User,
 )
 
 
@@ -34,6 +35,8 @@ class OrdersRepository:
         self,
         *,
         service_date: date | None = None,
+        service_date_from: date | None = None,
+        service_date_to: date | None = None,
         status: OrderStatus | None = None,
         client_id: uuid.UUID | None = None,
         district: str | None = None,
@@ -44,6 +47,10 @@ class OrdersRepository:
         stmt = select(Order).order_by(Order.service_date, Order.desired_time)
         if service_date is not None:
             stmt = stmt.where(Order.service_date == service_date)
+        if service_date_from is not None:
+            stmt = stmt.where(Order.service_date >= service_date_from)
+        if service_date_to is not None:
+            stmt = stmt.where(Order.service_date <= service_date_to)
         if status is not None:
             stmt = stmt.where(Order.status == status)
         if client_id is not None:
@@ -161,7 +168,12 @@ class DriversRepository:
         limit: int = 200,
         offset: int = 0,
     ) -> list[Driver]:
-        stmt = select(Driver).order_by(Driver.full_name)
+        stmt = (
+            select(Driver)
+            .join(User, User.id == Driver.user_id)
+            .where(User.status == UserStatus.active)
+            .order_by(Driver.full_name)
+        )
         if region is not None:
             stmt = stmt.where(Driver.region == region)
         if is_online is not None:

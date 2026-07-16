@@ -34,7 +34,7 @@ from app.services.reports import (
 )
 
 router = APIRouter(tags=["reports"])
-dispatcher = require_roles(UserRole.dispatcher)
+dispatcher = require_roles(UserRole.dispatcher, UserRole.admin)
 report_reader = require_roles(UserRole.dispatcher, UserRole.admin)
 
 

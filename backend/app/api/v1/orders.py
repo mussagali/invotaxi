@@ -64,15 +64,24 @@ async def list_orders(
     actor: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     service_date: date | None = None,
+    service_date_from: date | None = None,
+    service_date_to: date | None = None,
     status: OrderStatus | None = None,
     district: str | None = None,
     client_id: uuid.UUID | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[OrderOut]:
+    if service_date_from and service_date_to and service_date_from > service_date_to:
+        raise HTTPException(
+            status_code=422,
+            detail="service_date_from must not exceed service_date_to",
+        )
     orders = await OrdersService(session).list_visible(
         actor,
         service_date=service_date,
+        service_date_from=service_date_from,
+        service_date_to=service_date_to,
         status=status,
         district=district,
         client_id=client_id,

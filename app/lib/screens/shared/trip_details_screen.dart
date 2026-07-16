@@ -189,9 +189,6 @@ class _PersonRow extends StatelessWidget {
     final driver = context.app.assignedDriver;
     final name = isDriver ? 'Пассажир' : driver.name;
     final role = isDriver ? 'Пассажир' : driver.car;
-    final avatar = isDriver
-        ? 'assets/images/avatar_passenger.jpg'
-        : 'assets/images/avatar_driver.jpg';
     return AppCard(
       color: p.surfaceAlt,
       border: false,
@@ -199,7 +196,10 @@ class _PersonRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Avatar(asset: avatar, radius: 18),
+          SoftIconBox(
+            icon: isDriver ? Icons.person_outline : Icons.local_taxi_outlined,
+            size: 36,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

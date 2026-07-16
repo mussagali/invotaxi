@@ -21,18 +21,49 @@ export interface ComparisonMetrics { current:{orders:number;completed:number;rev
 interface RawOrder { id:string; service_date:string; desired_time:string; status:string; created_at:string }
 interface RawDriver { user_id:string; full_name:string; is_online:boolean }
 
-async function allOrders(params?: AnalyticsParams): Promise<RawOrder[]> {
-  const rows: RawOrder[] = [];
-  for (let offset = 0; offset < 5000; offset += 100) {
-    const page = (await api.get<RawOrder[]>('/orders', { params: { limit: 100, offset } })).data;
-    rows.push(...page);
-    if (page.length < 100) break;
-  }
-  const from = params?.date_from?.slice(0, 10);
-  const to = params?.date_to?.slice(0, 10);
-  return rows.filter((o) => (!from || o.service_date >= from) && (!to || o.service_date <= to));
+const ordersCache = new Map<string, { expiresAt: number; promise: Promise<RawOrder[]> }>();
+let driversCache: { expiresAt: number; promise: Promise<RawDriver[]> } | null = null;
+
+function normalizedDate(value?: string): string | undefined {
+  return value?.slice(0, 10) || undefined;
 }
-async function drivers(): Promise<RawDriver[]> { return (await api.get<RawDriver[]>('/drivers', { params: { limit: 200 } })).data; }
+
+async function allOrders(params?: AnalyticsParams): Promise<RawOrder[]> {
+  const from = normalizedDate(params?.date_from);
+  const to = normalizedDate(params?.date_to);
+  const key = `${from ?? ''}:${to ?? ''}`;
+  const cached = ordersCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.promise;
+  const promise = (async () => {
+    const rows: RawOrder[] = [];
+    for (let offset = 0; offset < 5000; offset += 100) {
+      const page = (await api.get<RawOrder[]>('/orders', {
+        params: { limit: 100, offset, service_date_from: from, service_date_to: to },
+      })).data;
+      rows.push(...page);
+      if (page.length < 100) break;
+    }
+    return rows.filter((o) => (!from || o.service_date >= from) && (!to || o.service_date <= to));
+  })();
+  ordersCache.set(key, { expiresAt: Date.now() + 5_000, promise });
+  try {
+    return await promise;
+  } catch (error) {
+    ordersCache.delete(key);
+    throw error;
+  }
+}
+async function drivers(): Promise<RawDriver[]> {
+  if (driversCache && driversCache.expiresAt > Date.now()) return driversCache.promise;
+  const promise = api.get<RawDriver[]>('/drivers', { params: { limit: 200 } }).then(({ data }) => data);
+  driversCache = { expiresAt: Date.now() + 5_000, promise };
+  try {
+    return await promise;
+  } catch (error) {
+    driversCache = null;
+    throw error;
+  }
+}
 const done = (s:string) => s === 'completed';
 const cancelled = (s:string) => s === 'cancelled';
 
@@ -81,7 +112,7 @@ export const analyticsApi = {
   },
   async getComparison(params?:AnalyticsParams): Promise<ComparisonMetrics> {
     const currentRows=await allOrders(params); let previousRows:RawOrder[]=[];
-    if(params?.date_from&&params.date_to){ const from=new Date(params.date_from+'T00:00:00Z'); const to=new Date(params.date_to+'T00:00:00Z'); const days=Math.max(1,Math.round((to.getTime()-from.getTime())/86400000)+1); const prevTo=new Date(from.getTime()-86400000); const prevFrom=new Date(prevTo.getTime()-(days-1)*86400000); previousRows=await allOrders({date_from:prevFrom.toISOString().slice(0,10),date_to:prevTo.toISOString().slice(0,10)}); }
+    if(params?.date_from&&params.date_to){ const from=new Date(`${normalizedDate(params.date_from)}T00:00:00Z`); const to=new Date(`${normalizedDate(params.date_to)}T00:00:00Z`); const days=Math.max(1,Math.round((to.getTime()-from.getTime())/86400000)+1); const prevTo=new Date(from.getTime()-86400000); const prevFrom=new Date(prevTo.getTime()-(days-1)*86400000); previousRows=await allOrders({date_from:prevFrom.toISOString().slice(0,10),date_to:prevTo.toISOString().slice(0,10)}); }
     const current={orders:currentRows.length,completed:currentRows.filter(o=>done(o.status)).length,revenue:0,avg_order_value:0}; const previous={orders:previousRows.length,completed:previousRows.filter(o=>done(o.status)).length,revenue:0,avg_order_value:0};
     return {current,previous,changes:{orders:pct(current.orders,previous.orders),completed:pct(current.completed,previous.completed),revenue:0,avg_order_value:0}};
   },

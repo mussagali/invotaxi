@@ -232,7 +232,7 @@ class _DriverRow extends StatelessWidget {
     final d = context.app.assignedDriver;
     return Row(
       children: [
-        const Avatar(asset: 'assets/images/avatar_driver.jpg', radius: 22),
+        const SoftIconBox(icon: Icons.local_taxi_outlined, size: 44),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

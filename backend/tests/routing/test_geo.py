@@ -27,4 +27,6 @@ def test_cross_bank_distance_goes_through_bridge() -> None:
 
 def test_bbox() -> None:
     assert in_bbox(47.1, 51.9)
-    assert not in_bbox(48.0, 51.9)
+    assert in_bbox(51.1694, 71.4491)  # Astana
+    assert in_bbox(43.2389, 76.8897)  # Almaty
+    assert not in_bbox(39.0, 71.0)

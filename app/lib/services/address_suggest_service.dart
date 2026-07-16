@@ -4,19 +4,22 @@ import 'package:http/http.dart' as http;
 
 import '../config/env.dart';
 import '../models/models.dart';
+import 'location_context_service.dart';
 
 class AddressSuggestService {
-  static Future<List<Place>> search(String query) async {
-    final key = AppEnv.yandexSuggestApiKey.trim();
+  static Future<List<Place>> search(
+    String query,
+    CityLocationContext context,
+  ) async {
     if (query.trim().length < 2) return const [];
-    final text = query.toLowerCase().contains('атырау')
-        ? query.trim()
-        : 'Атырау, ${query.trim()}';
-    if (key.isEmpty) return _geocodeSearch(text);
+    final text = _withCity(query, context.cityName);
+    final key = AppEnv.yandexSuggestApiKey.trim();
+    if (key.isEmpty) return _geocodeSearch(text, context);
+
     final uri = Uri.https('suggest-maps.yandex.ru', '/v1/suggest', {
       'apikey': key,
       'text': text,
-      'bbox': '51.55,46.85~52.15,47.35',
+      'bbox': context.bounds.yandexBbox,
       'strict_bounds': '1',
       'lang': 'ru',
       'results': '10',
@@ -25,7 +28,9 @@ class AddressSuggestService {
     });
     try {
       final response = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) return _geocodeSearch(text);
+      if (response.statusCode != 200) {
+        return _geocodeSearch(text, context);
+      }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map || decoded['results'] is! List) return const [];
       return (decoded['results'] as List)
@@ -42,12 +47,17 @@ class AddressSuggestService {
           .where((item) => item.title.isNotEmpty)
           .toList();
     } catch (_) {
-      return _geocodeSearch(text);
+      return _geocodeSearch(text, context);
     }
   }
 
-  static Future<Place?> resolve(Place place) async {
-    if (place.lat != null && place.lon != null) return place;
+  static Future<Place?> resolve(
+    Place place,
+    CityLocationContext context,
+  ) async {
+    if (place.lat != null && place.lon != null) {
+      return context.bounds.contains(place.lat!, place.lon!) ? place : null;
+    }
     final key = AppEnv.yandexMapsApiKey.trim();
     if (key.isEmpty) return null;
     final parameters = <String, String>{
@@ -55,27 +65,24 @@ class AddressSuggestService {
       'lang': 'ru_RU',
       'format': 'json',
       'results': '1',
-      'bbox': '51.55,46.85~52.15,47.35',
+      'bbox': context.bounds.yandexBbox,
       'rspn': '1',
       if ((place.uri ?? '').isNotEmpty) 'uri': place.uri!,
-      if ((place.uri ?? '').isEmpty) 'geocode': place.displayName,
+      if ((place.uri ?? '').isEmpty)
+        'geocode': _withCity(place.displayName, context.cityName),
     };
     try {
       final response = await http
           .get(Uri.https('geocode-maps.yandex.ru', '/v1/', parameters))
           .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) return null;
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final collection = decoded['response']?['GeoObjectCollection'];
-      final members = collection?['featureMember'];
-      if (members is! List || members.isEmpty) return null;
-      final position = members.first['GeoObject']?['Point']?['pos'];
-      if (position is! String) return null;
-      final values = position.split(' ').map(double.tryParse).toList();
-      final lon = values.elementAtOrNull(0);
-      final lat = values.elementAtOrNull(1);
-      if (lat == null || lon == null) return null;
-      if (lat < 46.85 || lat > 47.35 || lon < 51.55 || lon > 52.15) {
+      final object = _firstObject(jsonDecode(response.body));
+      if (object == null || !_belongsToCity(object, context.cityName)) {
+        return null;
+      }
+      final coordinates = _coordinates(object);
+      if (coordinates == null ||
+          !context.bounds.contains(coordinates.$2, coordinates.$1)) {
         return null;
       }
       return Place(
@@ -83,15 +90,18 @@ class AddressSuggestService {
         place.subtitle,
         icon: place.icon,
         uri: place.uri,
-        lat: lat,
-        lon: lon,
+        lat: coordinates.$2,
+        lon: coordinates.$1,
       );
     } catch (_) {
       return null;
     }
   }
 
-  static Future<List<Place>> _geocodeSearch(String text) async {
+  static Future<List<Place>> _geocodeSearch(
+    String text,
+    CityLocationContext context,
+  ) async {
     final key = AppEnv.yandexMapsApiKey.trim();
     if (key.isEmpty) return const [];
     final uri = Uri.https('geocode-maps.yandex.ru', '/v1/', {
@@ -100,29 +110,29 @@ class AddressSuggestService {
       'lang': 'ru_RU',
       'format': 'json',
       'results': '10',
-      'bbox': '51.55,46.85~52.15,47.35',
+      'bbox': context.bounds.yandexBbox,
       'rspn': '1',
     });
     try {
       final response = await http.get(uri).timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) return const [];
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final collection = decoded['response']?['GeoObjectCollection'];
-      final members = collection?['featureMember'];
+      final members =
+          decoded['response']?['GeoObjectCollection']?['featureMember'];
       if (members is! List) return const [];
       return members
           .whereType<Map>()
-          .map((member) {
-            final object = member['GeoObject'];
-            final position = object?['Point']?['pos'];
-            final values = position is String
-                ? position.split(' ').map(double.tryParse).toList()
-                : const <double?>[];
+          .map((member) => member['GeoObject'])
+          .whereType<Map>()
+          .map((raw) => Map<String, dynamic>.from(raw))
+          .where((object) => _belongsToCity(object, context.cityName))
+          .map((object) {
+            final coordinates = _coordinates(object);
             return Place(
-              object?['name']?.toString() ?? '',
-              object?['description']?.toString() ?? '',
-              lon: values.elementAtOrNull(0),
-              lat: values.elementAtOrNull(1),
+              object['name']?.toString() ?? '',
+              object['description']?.toString() ?? '',
+              lon: coordinates?.$1,
+              lat: coordinates?.$2,
             );
           })
           .where((place) {
@@ -131,14 +141,57 @@ class AddressSuggestService {
             return place.title.isNotEmpty &&
                 lat != null &&
                 lon != null &&
-                lat >= 46.85 &&
-                lat <= 47.35 &&
-                lon >= 51.55 &&
-                lon <= 52.15;
+                context.bounds.contains(lat, lon);
           })
           .toList();
     } catch (_) {
       return const [];
     }
   }
+
+  static String _withCity(String query, String city) {
+    final normalizedQuery = _normalize(query);
+    return normalizedQuery.contains(_normalize(city))
+        ? query.trim()
+        : '$city, ${query.trim()}';
+  }
+
+  static Map<String, dynamic>? _firstObject(dynamic decoded) {
+    if (decoded is! Map) return null;
+    final members =
+        decoded['response']?['GeoObjectCollection']?['featureMember'];
+    if (members is! List || members.isEmpty || members.first is! Map) {
+      return null;
+    }
+    final raw = (members.first as Map)['GeoObject'];
+    return raw is Map ? Map<String, dynamic>.from(raw) : null;
+  }
+
+  static (double, double)? _coordinates(Map<String, dynamic> object) {
+    final position = object['Point']?['pos'];
+    if (position is! String) return null;
+    final values = position.split(' ').map(double.tryParse).toList();
+    final longitude = values.elementAtOrNull(0);
+    final latitude = values.elementAtOrNull(1);
+    if (longitude == null || latitude == null) return null;
+    return (longitude, latitude);
+  }
+
+  static bool _belongsToCity(Map<String, dynamic> object, String city) {
+    final components =
+        object['metaDataProperty']?['GeocoderMetaData']?['Address']?['Components'];
+    if (components is! List) return false;
+    final localities = components
+        .whereType<Map>()
+        .where((item) => item['kind'] == 'locality')
+        .map((item) => item['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty);
+    return localities.any((name) => _normalize(name) == _normalize(city));
+  }
+
+  static String _normalize(String value) => value
+      .toLowerCase()
+      .replaceAll('ё', 'е')
+      .replaceAll(RegExp(r'[^a-zа-я0-9]+'), ' ')
+      .trim();
 }

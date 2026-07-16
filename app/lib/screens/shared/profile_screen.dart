@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_palette.dart';
 import '../../state/app_scope.dart';
+import '../../services/location_context_service.dart';
 import '../../widgets/common.dart';
 import 'personal_info_screen.dart';
 import 'support_screen.dart';
@@ -17,9 +18,9 @@ class ProfileScreen extends StatelessWidget {
     final p = context.palette;
     final app = context.app;
     final name = app.profileName;
-    final avatar = isDriver
-        ? 'assets/images/avatar_driver.jpg'
-        : 'assets/images/avatar_passenger.jpg';
+    final profileRegion = app.session?.profile['region'] as String?;
+    final detectedCity = LocationContextService.cached?.cityName;
+    final locationLabel = isDriver ? profileRegion : detectedCity;
 
     return Scaffold(
       body: SafeArea(
@@ -28,22 +29,25 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Avatar(asset: avatar, radius: 26),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${app.phone} · Атырау',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: p.textSecondary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          app.phone,
+                          if ((locationLabel ?? '').isNotEmpty) locationLabel!,
+                        ].join(' · '),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: p.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

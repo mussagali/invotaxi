@@ -5,7 +5,7 @@ import { driversApi } from "../services/drivers";
 import { passengersApi } from "../services/passengers";
 import { analyticsApi } from "../services/analytics";
 import { dispatchApi, DashboardDistributionResponse } from "../services/dispatch";
-import { getTomorrowDateInAtyrau } from "../utils/atyrauDate";
+import { getTodayDateInAtyrau } from "../utils/atyrauDate";
 import {
   LineChart,
   Line,
@@ -46,7 +46,7 @@ export function Dashboard() {
   const [statusData, setStatusData] = useState<Array<{ name: string; value: number; color: string }>>([]);
   const [regionData, setRegionData] = useState<Array<{ region: string; заказы: number }>>([]);
   const [comparison, setComparison] = useState<any>(null);
-  const [distributionDate, setDistributionDate] = useState(() => getTomorrowDateInAtyrau());
+  const [distributionDate, setDistributionDate] = useState(() => getTodayDateInAtyrau());
   const [distributionData, setDistributionData] = useState<DashboardDistributionResponse | null>(null);
   const [distributionLoading, setDistributionLoading] = useState(true);
   const [selectedHour, setSelectedHour] = useState<number | null>(null);
@@ -108,8 +108,8 @@ export function Dashboard() {
           analyticsApi.getComparison(params),
         ]);
 
-        const activeOrders = orders.filter(
-          (o) => o.status === "assigned" || o.status === "driver_en_route" || o.status === "ride_ongoing"
+        const activeOrders = orders.filter((o) =>
+          ["created", "scheduled", "assigned", "driver_en_route", "picked_up"].includes(o.status)
         ).length;
         const onlineDrivers = drivers.filter((d) => d.is_online).length;
         const today = new Date();
@@ -141,12 +141,14 @@ export function Dashboard() {
         // Формируем данные для графика статусов
         const statusChartData = metrics.status_distribution.map((item, index) => {
           const statusNames: Record<string, string> = {
-            pending: "Ожидание",
+            created: "Создан",
+            scheduled: "Запланирован",
             assigned: "Назначен",
             driver_en_route: "В пути",
-            ride_ongoing: "В поездке",
+            picked_up: "В поездке",
             completed: "Выполнено",
             cancelled: "Отменено",
+            exception: "Требует внимания",
           };
           return {
             name: statusNames[item.status] || item.status,

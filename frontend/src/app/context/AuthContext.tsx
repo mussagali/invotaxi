@@ -9,7 +9,6 @@ export interface User {
   email: string;
   role: UserRole;
   phone: string;
-  avatar?: string;
 }
 
 interface AuthContextType {
@@ -127,7 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Валидность токена будет проверяться при первом API запросе
           const remote = await authApi.me();
           const userData = JSON.parse(savedUser) as User;
-          setUser({ ...userData, id: String(remote.id), phone: remote.phone });
+          const refreshedUser = {
+            ...userData,
+            id: String(remote.id),
+            name: remote.username,
+            phone: remote.phone,
+            role: remote.role as UserRole,
+          };
+          setUser(refreshedUser);
+          localStorage.setItem("invotaxi_user", JSON.stringify(refreshedUser));
         } catch (error) {
           // Если данные повреждены, очищаем
           localStorage.removeItem("accessToken");

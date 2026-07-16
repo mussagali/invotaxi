@@ -62,7 +62,7 @@ def validate_components(
                     issues.append(
                         ValidationIssue(
                             "bbox",
-                            f"coordinate ({stop.lat}, {stop.lon}) is outside Atyrau bbox",
+                            f"coordinate ({stop.lat}, {stop.lon}) is outside Kazakhstan",
                             driver_id,
                             stop.order_id,
                         )
