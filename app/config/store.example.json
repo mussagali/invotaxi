@@ -1,0 +1,6 @@
+{
+  "API_BASE_URL": "https://api.example.kz/api/v1",
+  "ALLOW_DEV_LOGIN": "false",
+  "YANDEX_MAPS_API_KEY": "SET_AT_BUILD_TIME",
+  "YANDEX_MAPS_SUGGEST_API_KEY": "SET_AT_BUILD_TIME"
+}

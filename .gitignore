@@ -1,0 +1,29 @@
+# Secrets and local configuration
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env.local
+frontend/.env.*.local
+
+# Generated dependencies and builds
+frontend/node_modules/
+frontend/dist/
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/android/.gradle/
+app/android/key.properties
+app/ios/Pods/
+
+# Runtime and test artifacts
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+*.pyc
+
+# Local backend repository metadata retained outside the unified repo
+backend/.git.backend-history/
+._remote_inspect/

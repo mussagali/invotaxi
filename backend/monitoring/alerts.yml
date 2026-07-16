@@ -1,0 +1,55 @@
+groups:
+  - name: invotaxi-performance
+    rules:
+      - alert: ApiP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency is above 500 ms
+
+      - alert: ApiErrorRateHigh
+        expr: |
+          sum(rate(http_requests_total{status=~"5.*"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total[5m])), 0.001)
+          > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: API 5xx error rate is above 1%
+
+      - alert: HostDiskUsageHigh
+        expr: |
+          max by (instance, device, mountpoint) (
+            1 - (
+              node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+              /
+              clamp_min(node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}, 1)
+            )
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host filesystem usage is above 80%
+
+      - alert: DispatchJobTooSlow
+        expr: |
+          max(invotaxi_dispatch_job_last_duration_seconds) > 900
+          or
+          max(
+            (time() - invotaxi_dispatch_job_started_timestamp_seconds)
+            and invotaxi_dispatch_job_started_timestamp_seconds > 0
+          ) > 900
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: The last dispatch job took more than 15 minutes

@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Configure class-based dark mode */
+@variant dark (.dark &);

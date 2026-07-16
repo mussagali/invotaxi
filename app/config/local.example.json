@@ -1,0 +1,6 @@
+{
+  "API_BASE_URL": "http://localhost:8000/api/v1",
+  "ALLOW_DEV_LOGIN": "true",
+  "YANDEX_MAPS_API_KEY": "",
+  "YANDEX_MAPS_SUGGEST_API_KEY": ""
+}

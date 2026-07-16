@@ -1,0 +1,12 @@
+# Matrix runs use only the Compose network, so they cannot collide with a local dev stack.
+services:
+  api:
+    ports: !reset []
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  prometheus:
+    ports: !reset []
+  grafana:
+    ports: !reset []

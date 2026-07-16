@@ -1,0 +1,28 @@
+services:
+  api:
+    command:
+      - /bin/sh
+      - -c
+      - mkdir -p /tmp/prometheus-multiproc && rm -f /tmp/prometheus-multiproc/*.db && exec gunicorn app.main:app -c gunicorn.conf.py -k uvicorn.workers.UvicornWorker -w "$${API_WORKERS:-2}" -b 0.0.0.0:8000 --timeout 0 --graceful-timeout 30 --access-logfile -
+    environment:
+      ENV: prod
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus-multiproc
+    volumes:
+      - reports:/data/reports
+    deploy:
+      replicas: ${API_REPLICAS:-1}
+      restart_policy:
+        condition: on-failure
+
+  worker:
+    environment:
+      ENV: prod
+      WORKER_METRICS_PORT: "8001"
+    volumes:
+      - reports:/data/reports
+    expose:
+      - "8001"
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+      restart_policy:
+        condition: on-failure

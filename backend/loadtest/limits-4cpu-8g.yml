@@ -1,0 +1,26 @@
+# Aggregate application profile: 4 vCPU / 8 GiB across API, worker, PG and Redis.
+services:
+  api:
+    deploy:
+      resources:
+        limits:
+          cpus: "2.40"
+          memory: 3072M
+  worker:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.80"
+          memory: 2048M
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.60"
+          memory: 2560M
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: 512M

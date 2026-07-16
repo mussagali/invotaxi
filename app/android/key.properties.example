@@ -1,0 +1,4 @@
+storePassword=REPLACE_WITH_SECRET
+keyPassword=REPLACE_WITH_SECRET
+keyAlias=upload
+storeFile=../keystore/invotaxi-upload.jks
