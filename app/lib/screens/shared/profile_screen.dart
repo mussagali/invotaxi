@@ -8,6 +8,8 @@ import 'support_screen.dart';
 import 'notifications_screen.dart';
 import 'legal_screen.dart';
 import '../role_select_screen.dart';
+import '../passenger/dependents_screen.dart';
+import 'tutorial_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, this.isDriver = false});
@@ -58,6 +60,26 @@ class ProfileScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => PersonalInfoScreen(isDriver: isDriver),
+                ),
+              ),
+            ),
+            if (!isDriver)
+              _MenuRow(
+                icon: Icons.family_restroom_outlined,
+                label: 'Дети и подопечные',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const DependentsScreen(selectionMode: false),
+                  ),
+                ),
+              ),
+            _MenuRow(
+              icon: Icons.school_outlined,
+              label: 'Как пользоваться приложением',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TutorialScreen(isDriver: isDriver),
                 ),
               ),
             ),

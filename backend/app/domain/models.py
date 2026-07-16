@@ -81,6 +81,26 @@ class ClientProfile(Base):
     default_addresses: Mapped[list[Any]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
 
 
+class Dependent(TimestampMixin, Base):
+    """A child or other dependent whose trips are ordered by a client/guardian."""
+
+    __tablename__ = "dependents"
+    __table_args__ = (
+        Index("ix_dependents_guardian_active", "guardian_id", "is_active"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    guardian_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("client_profiles.user_id", ondelete="CASCADE"), index=True
+    )
+    full_name: Mapped[str] = mapped_column(Text)
+    needs_escort: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    notes: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+
+
 class Driver(Base):
     __tablename__ = "drivers"
     __table_args__ = (CheckConstraint("capacity IN (4, 6)", name="capacity_4_or_6"),)
@@ -103,7 +123,7 @@ class Driver(Base):
 class Order(TimestampMixin, Base):
     __tablename__ = "orders"
     __table_args__ = (
-        CheckConstraint("seats IN (1, 2)", name="seats_1_or_2"),
+        CheckConstraint("seats BETWEEN 1 AND 6", name="seats_1_to_6"),
         Index("ix_orders_service_date_status", "service_date", "status"),
         Index(
             "ix_orders_twin_group_id",
@@ -130,6 +150,12 @@ class Order(TimestampMixin, Base):
     dropoff_lon: Mapped[float | None] = mapped_column(Float(53))
     escort: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     seats: Mapped[int] = mapped_column(Integer, server_default=text("1"))
+    dependent_ids: Mapped[list[Any]] = mapped_column(
+        JSONB, server_default=text("'[]'::jsonb")
+    )
+    passenger_names: Mapped[list[Any]] = mapped_column(
+        JSONB, server_default=text("'[]'::jsonb")
+    )
     twin_group_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     status: Mapped[OrderStatus] = mapped_column(
         order_status, server_default=OrderStatus.created.value

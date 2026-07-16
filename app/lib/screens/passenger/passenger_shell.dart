@@ -5,6 +5,7 @@ import '../../state/app_scope.dart';
 import '../../widgets/bottom_nav.dart';
 import '../shared/history_screen.dart';
 import '../shared/profile_screen.dart';
+import '../shared/tutorial_screen.dart';
 import 'order_screen.dart';
 import 'waiting_screen.dart';
 import 'order_cancelled_screen.dart';
@@ -24,6 +25,14 @@ class _PassengerShellState extends State<PassengerShell> {
   void initState() {
     super.initState();
     context.appRead.addListener(_onState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || context.appRead.tutorialSeen) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const TutorialScreen(isDriver: false),
+        ),
+      );
+    });
   }
 
   @override

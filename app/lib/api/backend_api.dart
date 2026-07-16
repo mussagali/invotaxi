@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../config/env.dart';
+import '../models/models.dart';
 
 class ApiException implements Exception {
   const ApiException(this.message, {this.statusCode});
@@ -34,6 +35,7 @@ class BackendApi {
   static const _accessKey = 'auth.access';
   static const _refreshKey = 'auth.refresh';
   static const _roleKey = 'auth.role';
+  static const _tutorialSeenKey = 'app.tutorial_seen';
 
   final http.Client _client;
   SharedPreferences? _preferences;
@@ -49,6 +51,7 @@ class BackendApi {
   String get savedPhone => _preferences?.getString(_phoneKey) ?? '';
   String get savedRole => _preferences?.getString(_roleKey) ?? '';
   bool get hasRefreshToken => (_refreshToken ?? '').isNotEmpty;
+  bool get tutorialSeen => _preferences?.getBool(_tutorialSeenKey) ?? false;
 
   Future<void> initialize() async {
     _preferences = await SharedPreferences.getInstance();
@@ -128,6 +131,38 @@ class BackendApi {
     return getSession();
   }
 
+  Future<void> markTutorialSeen() async {
+    await _preferences?.setBool(_tutorialSeenKey, true);
+  }
+
+  Future<List<Dependent>> listDependents() async {
+    final body = await _request('GET', '/dependents') as List;
+    return body
+        .map(
+          (item) => Dependent.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
+  Future<Dependent> createDependent({
+    required String fullName,
+    bool needsEscort = false,
+  }) async {
+    final body = Map<String, dynamic>.from(
+      await _request(
+            'POST',
+            '/dependents',
+            body: {'full_name': fullName.trim(), 'needs_escort': needsEscort},
+          )
+          as Map,
+    );
+    return Dependent.fromJson(body);
+  }
+
+  Future<void> archiveDependent(String id) async {
+    await _request('DELETE', '/dependents/$id');
+  }
+
   Future<void> updateDriverRegion(String region) async {
     await _request('PATCH', '/auth/me', body: {'region': region.trim()});
   }
@@ -148,6 +183,7 @@ class BackendApi {
     double? pickupLon,
     double? dropoffLat,
     double? dropoffLon,
+    List<String> dependentIds = const [],
   }) async {
     final date =
         '${serviceAt.year.toString().padLeft(4, '0')}-'
@@ -166,6 +202,7 @@ class BackendApi {
               'pickup_addr': pickup,
               'dropoff_addr': dropoff,
               'escort': escort,
+              if (dependentIds.isNotEmpty) 'dependent_ids': dependentIds,
               'pickup_lat': ?pickupLat,
               'pickup_lon': ?pickupLon,
               'dropoff_lat': ?dropoffLat,

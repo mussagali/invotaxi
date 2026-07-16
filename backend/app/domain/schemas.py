@@ -195,6 +195,35 @@ class OrderCreate(_KazakhstanCoordinates):
     pickup_addr: str | None = Field(default=None, max_length=1000)
     dropoff_addr: str | None = Field(default=None, max_length=1000)
     escort: bool = False
+    dependent_ids: list[uuid.UUID] = Field(default_factory=list, max_length=5)
+
+
+class DependentCreate(BaseModel):
+    full_name: str = Field(min_length=1, max_length=200)
+    needs_escort: bool = False
+    notes: str | None = Field(default=None, max_length=1000)
+
+
+class DependentPatch(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    needs_escort: bool | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def is_not_empty(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("at least one dependent field is required")
+        return self
+
+
+class DependentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    full_name: str
+    needs_escort: bool
+    notes: str | None = None
+    is_active: bool
 
 
 class OrderPatch(_KazakhstanCoordinates):
@@ -236,6 +265,8 @@ class OrderOut(BaseModel):
     dropoff_lon: float | None
     escort: bool
     seats: int
+    dependent_ids: list[str] = Field(default_factory=list)
+    passenger_names: list[str] = Field(default_factory=list)
     twin_group_id: uuid.UUID | None
     status: OrderStatus
     cancel_reason: str | None

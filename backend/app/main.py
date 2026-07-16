@@ -15,6 +15,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
+from app.api.v1.dependents import router as dependents_router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.dispatch import router as dispatch_router
 from app.api.v1.drivers import router as drivers_router
@@ -146,6 +147,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api_v1.include_router(health_router)
     api_v1.include_router(auth_router)
     api_v1.include_router(clients_router)
+    api_v1.include_router(dependents_router)
     api_v1.include_router(drivers_router)
     api_v1.include_router(orders_router)
     api_v1.include_router(dispatch_router)

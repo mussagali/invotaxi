@@ -27,6 +27,8 @@ class AppState extends ChangeNotifier {
   UserRole role = UserRole.none;
   BackendSession? session;
   List<Map<String, dynamic>> _orders = const [];
+  List<Dependent> _dependents = const [];
+  bool tutorialSeen = false;
 
   OrderRequest? activeOrder;
   OrderStage stage = OrderStage.idle;
@@ -36,6 +38,7 @@ class AppState extends ChangeNotifier {
   String get profileName =>
       session?.profile['full_name'] as String? ?? 'Пользователь';
   String get phone => session?.phone ?? savedPhone;
+  List<Dependent> get dependents => List.unmodifiable(_dependents);
 
   Driver get assignedDriver => Driver(
     name: role == UserRole.driver ? profileName : 'Назначенный водитель',
@@ -58,6 +61,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await api.initialize();
     savedPhone = api.savedPhone;
+    tutorialSeen = api.tutorialSeen;
     final restored = await api.restoreSession();
     if (restored != null) await _activateSession(restored);
     initializing = false;
@@ -94,6 +98,7 @@ class AppState extends ChangeNotifier {
     session = value;
     role = value.role == 'driver' ? UserRole.driver : UserRole.passenger;
     await refreshOrders();
+    if (role == UserRole.passenger) await refreshDependents();
     api.connectRealtime((_) => unawaited(refreshOrders()));
     if (role == UserRole.driver) unawaited(_locationSync.start());
   }
@@ -126,6 +131,42 @@ class AppState extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshDependents() async {
+    if (role != UserRole.passenger) return;
+    try {
+      _dependents = await api.listDependents();
+    } on ApiException catch (error) {
+      lastError = error.message;
+    }
+    notifyListeners();
+  }
+
+  Future<Dependent> addDependent({
+    required String fullName,
+    bool needsEscort = false,
+  }) async {
+    final dependent = await api.createDependent(
+      fullName: fullName,
+      needsEscort: needsEscort,
+    );
+    _dependents = [..._dependents, dependent]
+      ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    notifyListeners();
+    return dependent;
+  }
+
+  Future<void> archiveDependent(String id) async {
+    await api.archiveDependent(id);
+    _dependents = _dependents.where((item) => item.id != id).toList();
+    notifyListeners();
+  }
+
+  Future<void> completeTutorial() async {
+    tutorialSeen = true;
+    await api.markTutorialSeen();
+    notifyListeners();
   }
 
   void _syncOrderState() {
@@ -171,6 +212,7 @@ class AppState extends ChangeNotifier {
         pickupLon: order.pickupLon,
         dropoffLat: order.dropoffLat,
         dropoffLon: order.dropoffLon,
+        dependentIds: order.dependentIds,
       );
       _orders = [created, ..._orders];
       _syncOrderState();
@@ -246,6 +288,7 @@ class AppState extends ChangeNotifier {
     driverStage = DriverStage.idle;
     driverOrder = null;
     _orders = const [];
+    _dependents = const [];
     notifyListeners();
   }
 
@@ -264,6 +307,7 @@ class AppState extends ChangeNotifier {
       driverStage = DriverStage.idle;
       driverOrder = null;
       _orders = const [];
+      _dependents = const [];
     } on ApiException catch (error) {
       lastError = error.message;
       rethrow;
@@ -283,13 +327,18 @@ class AppState extends ChangeNotifier {
     dropoffLat: (item['dropoff_lat'] as num?)?.toDouble(),
     dropoffLon: (item['dropoff_lon'] as num?)?.toDouble(),
     escort: item['escort'] as bool? ?? false,
+    dependentIds: (item['dependent_ids'] as List? ?? const [])
+        .map((value) => value.toString())
+        .toList(),
     scheduledAt: _parseServiceDate(item),
   );
 
   DriverOrder _toDriverOrder(Map<String, dynamic> item) => DriverOrder(
     backendId: item['id'] as String? ?? '',
     status: item['status'] as String? ?? 'assigned',
-    passenger: 'Пассажир',
+    passenger: (item['passenger_names'] as List? ?? const []).isEmpty
+        ? 'Пассажир'
+        : (item['passenger_names'] as List).join(', '),
     timeLabel: '${item['service_date'] ?? ''}, ${item['desired_time'] ?? ''}',
     from: item['pickup_addr'] as String? ?? 'Адрес не указан',
     to: item['dropoff_addr'] as String? ?? 'Адрес не указан',

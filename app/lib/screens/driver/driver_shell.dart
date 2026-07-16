@@ -5,6 +5,7 @@ import '../../state/app_scope.dart';
 import '../../widgets/bottom_nav.dart';
 import '../shared/history_screen.dart';
 import '../shared/profile_screen.dart';
+import '../shared/tutorial_screen.dart';
 import 'orders_screen.dart';
 import 'pickup_screen.dart';
 import 'wait_screen.dart';
@@ -25,6 +26,12 @@ class _DriverShellState extends State<DriverShell> {
   void initState() {
     super.initState();
     context.appRead.addListener(_onState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || context.appRead.tutorialSeen) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const TutorialScreen(isDriver: true)),
+      );
+    });
   }
 
   @override

@@ -32,6 +32,27 @@ class Driver {
   });
 }
 
+class Dependent {
+  const Dependent({
+    required this.id,
+    required this.fullName,
+    this.needsEscort = false,
+    this.notes,
+  });
+
+  final String id;
+  final String fullName;
+  final bool needsEscort;
+  final String? notes;
+
+  factory Dependent.fromJson(Map<String, dynamic> json) => Dependent(
+    id: json['id'] as String,
+    fullName: json['full_name'] as String? ?? 'Ребёнок',
+    needsEscort: json['needs_escort'] as bool? ?? false,
+    notes: json['notes'] as String?,
+  );
+}
+
 class OrderRequest {
   final String? backendId;
   final String status;
@@ -42,6 +63,7 @@ class OrderRequest {
   final double? dropoffLat;
   final double? dropoffLon;
   final bool escort;
+  final List<String> dependentIds;
   final DateTime? scheduledAt; // null => right now
   final String? comment;
   const OrderRequest({
@@ -54,6 +76,7 @@ class OrderRequest {
     this.dropoffLat,
     this.dropoffLon,
     this.escort = false,
+    this.dependentIds = const [],
     this.scheduledAt,
     this.comment,
   });

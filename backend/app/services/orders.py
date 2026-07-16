@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, normalize_phone
 from app.domain.enums import OrderStatus, UserRole
-from app.domain.models import ClientProfile, Order, User
+from app.domain.models import ClientProfile, Dependent, Order, User
 from app.domain.repositories import OrdersRepository
 from app.domain.schemas import (
     DriverPositionOut,
@@ -54,6 +54,26 @@ class OrdersService:
         if await self.repo.count_active(client_id, service_date) >= MAX_ACTIVE_ORDERS_PER_DATE:
             raise OrderServiceError("client already has 4 active orders for this date", 409)
 
+    async def _selected_dependents(
+        self, client_id: uuid.UUID, dependent_ids: list[uuid.UUID]
+    ) -> list[Dependent]:
+        if not dependent_ids:
+            return []
+        if len(set(dependent_ids)) != len(dependent_ids):
+            raise OrderServiceError("a child cannot be selected twice", 422)
+        dependents = list(
+            await self.session.scalars(
+                select(Dependent).where(
+                    Dependent.guardian_id == client_id,
+                    Dependent.id.in_(dependent_ids),
+                    Dependent.is_active.is_(True),
+                )
+            )
+        )
+        if len(dependents) != len(dependent_ids):
+            raise OrderServiceError("one or more selected children are unavailable", 422)
+        return dependents
+
     async def create(self, body: OrderCreate, actor: User) -> Order:
         if body.service_date < date.today():
             raise OrderServiceError("service_date must be today or later", 422)
@@ -67,11 +87,19 @@ class OrdersService:
             raise OrderServiceError("insufficient role", 403)
 
         await self._ensure_capacity(client_id, body.service_date)
-        values = body.model_dump(exclude={"client_id"})
+        dependents = await self._selected_dependents(client_id, body.dependent_ids)
+        requires_escort = body.escort or any(item.needs_escort for item in dependents)
+        seats = len(dependents) + int(requires_escort) if dependents else (2 if body.escort else 1)
+        if seats > 6:
+            raise OrderServiceError("a family order cannot require more than 6 seats", 422)
+        values = body.model_dump(exclude={"client_id", "dependent_ids", "escort"})
         order = Order(
             client_id=client_id,
             created_by=actor.id,
-            seats=2 if body.escort else 1,
+            escort=requires_escort,
+            seats=seats,
+            dependent_ids=[str(item.id) for item in dependents],
+            passenger_names=[item.full_name for item in dependents],
             **values,
         )
         self.repo.add(order)
@@ -151,7 +179,12 @@ class OrdersService:
         for field, value in values.items():
             setattr(locked_order, field, value)
         if "escort" in values:
-            locked_order.seats = 2 if locked_order.escort else 1
+            dependent_count = len(locked_order.dependent_ids or [])
+            locked_order.seats = (
+                dependent_count + int(locked_order.escort)
+                if dependent_count
+                else (2 if locked_order.escort else 1)
+            )
         await self.session.commit()
         await self.session.refresh(locked_order)
         return locked_order

@@ -8,6 +8,7 @@ import '../../widgets/common.dart';
 import '../../widgets/map_background.dart';
 import '../../widgets/page_header.dart';
 import 'address_search_screen.dart';
+import 'dependents_screen.dart';
 import 'schedule_screen.dart';
 
 class OrderScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _OrderScreenState extends State<OrderScreen> {
   double? _dropoffLat;
   double? _dropoffLon;
   bool _escort = false;
+  Set<String> _selectedDependentIds = <String>{};
   DateTime? _scheduledAt;
   CityLocationContext? _locationContext;
   bool _detectingLocation = true;
@@ -107,6 +109,24 @@ class _OrderScreenState extends State<OrderScreen> {
     if (dt != null) setState(() => _scheduledAt = dt);
   }
 
+  Future<void> _pickDependents() async {
+    final selected = await Navigator.of(context).push<Set<String>>(
+      MaterialPageRoute(
+        builder: (_) => DependentsScreen(selectedIds: _selectedDependentIds),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    final selectedDependents = context.appRead.dependents.where(
+      (dependent) => selected.contains(dependent.id),
+    );
+    setState(() {
+      _selectedDependentIds = selected;
+      if (selectedDependents.any((dependent) => dependent.needsEscort)) {
+        _escort = true;
+      }
+    });
+  }
+
   Future<void> _order() async {
     if (_from.trim().isEmpty || _to.trim().isEmpty) {
       showToast(context, 'Выберите адрес посадки и назначения');
@@ -122,6 +142,7 @@ class _OrderScreenState extends State<OrderScreen> {
           dropoffLat: _dropoffLat,
           dropoffLon: _dropoffLon,
           escort: _escort,
+          dependentIds: _selectedDependentIds.toList(),
           scheduledAt: _scheduledAt,
         ),
       );
@@ -306,8 +327,7 @@ class _OrderScreenState extends State<OrderScreen> {
                           SquareIconButton(
                             icon: Icons.tune,
                             size: 56,
-                            onPressed: () =>
-                                showToast(context, 'Дополнительные параметры'),
+                            onPressed: _pickDependents,
                           ),
                         ],
                       ),
