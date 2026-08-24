@@ -1,9 +1,9 @@
 import api from './api';
 
 export interface Driver {
-  id: number;
+  id: string;
   user: {
-    id: number;
+    id: string;
     username: string;
     phone: string;
     email?: string;
@@ -160,7 +160,7 @@ export const driversApi = {
   /**
    * Получить водителя по ID
    */
-  async getDriver(driverId: number): Promise<Driver> {
+  async getDriver(driverId: string): Promise<Driver> {
     const driver = (await loadDrivers()).find((item) => String(item.id) === String(driverId));
     if (!driver) throw new Error("Водитель не найден");
     return driver;
@@ -180,7 +180,7 @@ export const driversApi = {
   /**
    * Обновить онлайн статус водителя
    */
-  async updateOnlineStatus(driverId: number, data: UpdateOnlineStatusRequest): Promise<Driver> {
+  async updateOnlineStatus(driverId: string, data: UpdateOnlineStatusRequest): Promise<Driver> {
     const response = await api.patch(`/drivers/${driverId}`, data);
     return adaptDriver(response.data);
   },
@@ -188,7 +188,7 @@ export const driversApi = {
   /**
    * Обновить позицию водителя
    */
-  async updateLocation(driverId: number, data: UpdateLocationRequest): Promise<Driver> {
+  async updateLocation(driverId: string, data: UpdateLocationRequest): Promise<Driver> {
     const response = await api.patch(`/drivers/${driverId}`, {
       home_lat: data.lat,
       home_lon: data.lon,
@@ -220,8 +220,9 @@ export const driversApi = {
   /**
    * Обновить водителя
    */
-  async updateDriver(driverId: number, data: UpdateDriverRequest): Promise<Driver> {
+  async updateDriver(driverId: string, data: UpdateDriverRequest): Promise<Driver> {
     const response = await api.patch(`/drivers/${driverId}`, {
+      phone: data.phone,
       full_name: data.name,
       region: data.region_id,
       vehicle_model: data.car_model,
@@ -235,7 +236,7 @@ export const driversApi = {
   /**
    * Удалить водителя
    */
-  async deleteDriver(driverId: number): Promise<void> {
+  async deleteDriver(driverId: string): Promise<void> {
     await api.delete(`/drivers/${driverId}`);
   },
 

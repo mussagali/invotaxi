@@ -9,6 +9,7 @@ import '../../widgets/map_background.dart';
 import '../../widgets/page_header.dart';
 import 'address_search_screen.dart';
 import 'dependents_screen.dart';
+import '../shared/map_picker_screen.dart';
 import 'schedule_screen.dart';
 
 class OrderScreen extends StatefulWidget {
@@ -100,6 +101,31 @@ class _OrderScreenState extends State<OrderScreen> {
         }
       });
     }
+  }
+
+  Future<void> _pickOnMap(bool isFrom) async {
+    final result = await Navigator.of(context).push<Place>(
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          title: isFrom ? 'Точка посадки' : 'Пункт назначения',
+          latitude: isFrom ? _pickupLat : _dropoffLat,
+          longitude: isFrom ? _pickupLon : _dropoffLon,
+          locationContext: _locationContext,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      if (isFrom) {
+        _from = result.displayName;
+        _pickupLat = result.lat;
+        _pickupLon = result.lon;
+      } else {
+        _to = result.displayName;
+        _dropoffLat = result.lat;
+        _dropoffLon = result.lon;
+      }
+    });
   }
 
   Future<void> _schedule() async {
@@ -286,6 +312,7 @@ class _OrderScreenState extends State<OrderScreen> {
                         label: 'Точка посадки',
                         value: _from,
                         onTap: () => _pick(true),
+                        onMap: () => _pickOnMap(true),
                       ),
                       const SizedBox(height: 10),
                       _AddressField(
@@ -293,6 +320,7 @@ class _OrderScreenState extends State<OrderScreen> {
                         label: 'Пункт назначения',
                         value: _to,
                         onTap: () => _pick(false),
+                        onMap: () => _pickOnMap(false),
                       ),
                       const SizedBox(height: 10),
                       _EscortRow(
@@ -362,11 +390,13 @@ class _AddressField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    required this.onMap,
   });
   final IconData icon;
   final String label;
   final String value;
   final VoidCallback onTap;
+  final VoidCallback onMap;
 
   @override
   Widget build(BuildContext context) {
@@ -375,7 +405,7 @@ class _AddressField extends StatelessWidget {
       label: label,
       value: value,
       onTap: onTap,
-      trailing: MiniPill(label: 'Карта', onTap: onTap),
+      trailing: MiniPill(label: 'Карта', onTap: onMap),
     );
   }
 }

@@ -144,6 +144,10 @@ class DriverOrder {
   final String timeLabel; // "Сегодня, 14:30"
   final String from;
   final String to;
+  final double? pickupLat;
+  final double? pickupLon;
+  final double? dropoffLat;
+  final double? dropoffLon;
   final bool escort;
   const DriverOrder({
     required this.backendId,
@@ -152,6 +156,10 @@ class DriverOrder {
     required this.timeLabel,
     required this.from,
     required this.to,
+    this.pickupLat,
+    this.pickupLon,
+    this.dropoffLat,
+    this.dropoffLon,
     this.escort = false,
   });
 }

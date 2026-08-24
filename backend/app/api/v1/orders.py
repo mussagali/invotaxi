@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db, get_redis, require_roles
 from app.domain.enums import OrderStatus, UserRole
-from app.domain.models import User
+from app.domain.models import Order, User
 from app.domain.schemas import (
+    AssignedDriverOut,
     CancelOrderRequest,
     DriverPositionOut,
     ImportReport,
@@ -29,6 +30,25 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 def _raise_service_error(exc: OrderServiceError | OrderStateError) -> NoReturn:
     raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+async def _orders_out(service: OrdersService, orders: list[Order]) -> list[OrderOut]:
+    assigned = await service.repo.assigned_driver_rows([order.id for order in orders])
+    result: list[OrderOut] = []
+    for order in orders:
+        value = OrderOut.model_validate(order)
+        row = assigned.get(order.id)
+        if row is not None:
+            driver, phone = row
+            value.assigned_driver = AssignedDriverOut(
+                id=driver.user_id,
+                name=driver.full_name,
+                car_model=driver.vehicle_model,
+                plate_number=driver.plate,
+                phone=phone,
+            )
+        result.append(value)
+    return result
 
 
 @router.post("/import", response_model=ImportReport)
@@ -88,7 +108,7 @@ async def list_orders(
         limit=limit,
         offset=offset,
     )
-    return [OrderOut.model_validate(order) for order in orders]
+    return await _orders_out(OrdersService(session), orders)
 
 
 @router.get("/{order_id}", response_model=OrderOut)
@@ -101,7 +121,7 @@ async def get_order(
         order = await OrdersService(session).get_visible(order_id, actor)
     except OrderServiceError as exc:
         _raise_service_error(exc)
-    return OrderOut.model_validate(order)
+    return (await _orders_out(OrdersService(session), [order]))[0]
 
 
 @router.get(

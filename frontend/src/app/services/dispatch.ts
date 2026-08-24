@@ -2,7 +2,7 @@ import api from './api';
 import { ordersApi, type Order } from './orders';
 
 export interface DispatchCandidate {
-  driver_id: number;
+  driver_id: string;
   name: string;
   region_id: string;
   car_model: string;
@@ -42,7 +42,7 @@ export interface AssignScheduleResult {
 
 export interface AssignOrderResponse {
   success: boolean;
-  driver_id?: number;
+  driver_id?: string;
   reason?: string;
   /** Расчёт очереди (ручное назначение с проверкой времени) */
   schedule?: AssignScheduleResult;
@@ -799,7 +799,7 @@ export const dispatchApi = {
    * Получить кандидатов для заказа
    */
   async getCandidates(orderId: string): Promise<CandidatesResponse> {
-    const response = await api.get<CandidatesResponse>(`/dispatch/candidates/${orderId}/`);
+    const response = await api.get<CandidatesResponse>(`/dispatch/candidates/${orderId}`);
     return response.data;
   },
 
@@ -808,7 +808,7 @@ export const dispatchApi = {
    */
   async assignOrder(orderId: string, driverId?: string): Promise<AssignOrderResponse> {
     try {
-      const response = await api.post<AssignOrderResponse>(`/dispatch/assign/${orderId}/`, driverId ? { driver_id: driverId } : {});
+      const response = await api.post<AssignOrderResponse>(`/dispatch/assign/${orderId}`, driverId ? { driver_id: driverId } : {});
       const data = response.data;
       
       // Проверяем success: false даже при успешном HTTP-ответе

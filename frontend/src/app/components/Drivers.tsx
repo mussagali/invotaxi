@@ -104,7 +104,7 @@ export function Drivers() {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("1111");
   const [newRegionId, setNewRegionId] = useState("");
   const [newCarModel, setNewCarModel] = useState("");
   const [newPlateNumber, setNewPlateNumber] = useState("");
@@ -183,7 +183,7 @@ export function Drivers() {
   const loadDriverOrders = useCallback(async (driverId: string) => {
     try {
       setOrdersLoading(true);
-      const orders = await ordersApi.getOrders({ driver_id: Number(driverId) });
+      const orders = await ordersApi.getOrders({ driver_id: driverId });
       setDriverOrders(orders);
     } catch (err: any) {
       setError(err.message || "Ошибка загрузки заказов");
@@ -263,7 +263,7 @@ export function Drivers() {
       setMapDetailDriver(null);
       return;
     }
-    const id = Number(mapModal);
+    const id = mapModal;
     let cancelled = false;
 
     const fetchDriverFresh = async () => {
@@ -289,7 +289,7 @@ export function Drivers() {
   const handleDeleteDriver = async () => {
     if (deleteModal) {
       try {
-        await driversApi.deleteDriver(Number(deleteModal));
+        await driversApi.deleteDriver(deleteModal);
         await refreshDrivers();
         setDeleteModal(null);
       } catch (err: any) {
@@ -316,7 +316,7 @@ export function Drivers() {
         is_online: editingIsOnline,
       };
 
-      await driversApi.updateDriver(Number(editModal), updateData);
+      await driversApi.updateDriver(editModal, updateData);
       await refreshDrivers();
       setEditModal(null);
       // Сброс полей редактирования
@@ -364,7 +364,7 @@ export function Drivers() {
       setNewName("");
       setNewPhone("");
       setNewEmail("");
-      setNewPassword("");
+      setNewPassword("1111");
       setNewRegionId("");
       setNewCarModel("");
       setNewPlateNumber("");
@@ -1016,7 +1016,7 @@ export function Drivers() {
           setNewName("");
           setNewPhone("");
           setNewEmail("");
-          setNewPassword("");
+          setNewPassword("1111");
           setNewRegionId("");
           setNewCarModel("");
           setNewPlateNumber("");
@@ -1074,7 +1074,7 @@ export function Drivers() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Минимум 8 символов"
+                placeholder="Временный пароль 1111"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -1172,7 +1172,7 @@ export function Drivers() {
                 setNewName("");
                 setNewPhone("");
                 setNewEmail("");
-                setNewPassword("");
+                setNewPassword("1111");
                 setNewRegionId("");
                 setNewCarModel("");
                 setNewPlateNumber("");
@@ -1386,13 +1386,13 @@ export function Drivers() {
                         if (!mapModal || !newDriverPosition) return;
                         try {
                           setSavingLocation(true);
-                          await driversApi.updateLocation(Number(mapModal), {
+                          await driversApi.updateLocation(mapModal, {
                             lat: newDriverPosition.lat,
                             lon: newDriverPosition.lon
                           });
                           await refreshDrivers();
                           try {
-                            const d = await driversApi.getDriver(Number(mapModal));
+                            const d = await driversApi.getDriver(mapModal);
                             setMapDetailDriver(d);
                           } catch {
                             /* ignore */
@@ -1644,7 +1644,7 @@ export function Drivers() {
             <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1 list-disc list-inside">
               <li>Используйте шаблон, скачанный кнопкой "Скачать шаблон"</li>
               <li>Обязательные поля: Имя, Телефон, Пароль, Регион, Машина, Гос. номер, Вместимость</li>
-              <li>Пароль должен содержать минимум 8 символов</li>
+              <li>Временный пароль для входа пассажира и водителя: 1111</li>
               <li>Телефон должен быть уникальным</li>
             </ul>
           </div>

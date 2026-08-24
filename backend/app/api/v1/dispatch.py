@@ -13,6 +13,9 @@ from app.domain.enums import UserRole
 from app.domain.models import User
 from app.domain.repositories import RoutingJobsRepository
 from app.domain.schemas import (
+    AssignOrderRequest,
+    AssignOrderResponse,
+    DispatchCandidatesOut,
     DispatchInsertRequest,
     DispatchInsertResult,
     DispatchJobCreate,
@@ -24,6 +27,7 @@ from app.domain.schemas import (
     RoutingJobOut,
     ValidationReportOut,
 )
+from app.services.assignment import AssignmentService, AssignmentServiceError
 from app.services.dispatch import DispatchService, DispatchServiceError
 from app.services.plans import PlanServiceError, PlansService
 
@@ -33,6 +37,34 @@ dispatcher = require_roles(UserRole.dispatcher, UserRole.admin)
 
 def _raise_error(exc: DispatchServiceError | PlanServiceError) -> NoReturn:
     raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.get("/dispatch/candidates/{order_id}", response_model=DispatchCandidatesOut)
+async def assignment_candidates(
+    order_id: uuid.UUID,
+    actor: Annotated[User, Depends(dispatcher)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[Redis, Depends(get_redis)],
+) -> DispatchCandidatesOut:
+    try:
+        return await AssignmentService(session, redis).candidates(order_id)
+    except AssignmentServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+@router.post("/dispatch/assign/{order_id}", response_model=AssignOrderResponse)
+async def assign_order(
+    order_id: uuid.UUID,
+    body: AssignOrderRequest,
+    actor: Annotated[User, Depends(dispatcher)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[Redis, Depends(get_redis)],
+) -> AssignOrderResponse:
+    try:
+        return await AssignmentService(session, redis).assign(order_id, body.driver_id, actor)
+    except AssignmentServiceError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.post("/dispatch/jobs", response_model=DispatchJobCreated, status_code=202)

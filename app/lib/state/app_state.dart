@@ -241,6 +241,25 @@ class AppState extends ChangeNotifier {
     await refreshOrders();
   }
 
+  Future<void> correctDriverOrderAddress({
+    required DriverOrder order,
+    required bool pickup,
+    required Place place,
+  }) async {
+    final updated = await api.correctOrderAddress(
+      orderId: order.backendId,
+      pickup: pickup,
+      place: place,
+    );
+    _orders = _orders
+        .map((item) => item['id'] == order.backendId ? updated : item)
+        .toList();
+    if (driverOrder?.backendId == order.backendId) {
+      driverOrder = _toDriverOrder(updated);
+    }
+    notifyListeners();
+  }
+
   void acceptOrder(DriverOrder order) => unawaited(_acceptOrder(order));
 
   Future<void> _acceptOrder(DriverOrder order) async {
@@ -342,6 +361,10 @@ class AppState extends ChangeNotifier {
     timeLabel: '${item['service_date'] ?? ''}, ${item['desired_time'] ?? ''}',
     from: item['pickup_addr'] as String? ?? 'Адрес не указан',
     to: item['dropoff_addr'] as String? ?? 'Адрес не указан',
+    pickupLat: (item['pickup_lat'] as num?)?.toDouble(),
+    pickupLon: (item['pickup_lon'] as num?)?.toDouble(),
+    dropoffLat: (item['dropoff_lat'] as num?)?.toDouble(),
+    dropoffLon: (item['dropoff_lon'] as num?)?.toDouble(),
     escort: item['escort'] as bool? ?? false,
   );
 

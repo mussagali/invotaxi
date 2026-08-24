@@ -1,0 +1,303 @@
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "Windows_NT" == "Windows_NT" setlocal
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set DEFAULT_JVM_OPTS= 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set DIRNAME=C:\Users\Qazx1\Desktop\invotaxi\app\android\ 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "C:\Users\Qazx1\Desktop\invotaxi\app\android\" == "" set DIRNAME=. 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set APP_BASE_NAME=gradlew 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set APP_HOME=C:\Users\Qazx1\Desktop\invotaxi\app\android\ 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if defined JAVA_HOME goto findJavaFromJavaHome 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set JAVA_HOME=C:\Program Files\Java\jdk-17 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set JAVA_EXE=C:\Program Files\Java\jdk-17/bin/java.exe 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if exist "C:\Program Files\Java\jdk-17/bin/java.exe" goto init 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if not "Windows_NT" == "Windows_NT" goto win9xME_args 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "@eval[2+2]" == "4" goto 4NT_args 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set CMD_LINE_ARGS= 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set _SKIP=2 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "x:app:assembleRelease" == "x" goto execute 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set CMD_LINE_ARGS=:app:assembleRelease --no-daemon --console=plain 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>goto execute 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>set CLASSPATH=C:\Users\Qazx1\Desktop\invotaxi\app\android\\gradle\wrapper\gradle-wrapper.jar 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>"C:\Program Files\Java\jdk-17/bin/java.exe"    "-Dorg.gradle.appname=gradlew" -classpath "C:\Users\Qazx1\Desktop\invotaxi\app\android\\gradle\wrapper\gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain :app:assembleRelease --no-daemon --console=plain 
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :gradle:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle:compileKotlin UP-TO-DATE
+> Task :gradle:compileJava NO-SOURCE
+> Task :gradle:compileGroovy NO-SOURCE
+> Task :gradle:pluginDescriptors UP-TO-DATE
+> Task :gradle:processResources UP-TO-DATE
+> Task :gradle:classes UP-TO-DATE
+> Task :gradle:jar UP-TO-DATE
+> Task :app:ReleaseMinSdkCheck
+> Task :app:compileFlutterBuildRelease
+> Task :app:packJniLibsflutterBuildRelease
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+
+> Task :app:configureCMakeRelease[arm64-v8a]
+[CXX5304] Observed package id 'platform-tools' in inconsistent location 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools.backup' (Expected 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools')
+[CXX5304] Observed package id 'platform-tools' in inconsistent location 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools.backup' (Expected 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools')
+[CXX5304] Already observed package id 'platform-tools' in 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools'. Skipping duplicate at 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools.backup'
+[CXX5304] Already observed package id 'platform-tools' in 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools'. Skipping duplicate at 'C:\Users\Qazx1\AppData\Local\Android\Sdk\platform-tools.backup'
+
+> Task :app:buildCMakeRelease[arm64-v8a]
+> Task :app:configureCMakeRelease[armeabi-v7a]
+> Task :app:buildCMakeRelease[armeabi-v7a]
+> Task :app:configureCMakeRelease[x86_64]
+> Task :app:buildCMakeRelease[x86_64]
+> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :geolocator_android:preBuild UP-TO-DATE
+> Task :geolocator_android:preReleaseBuild UP-TO-DATE
+> Task :geolocator_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :geolocator_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :geolocator_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :package_info_plus:preBuild UP-TO-DATE
+> Task :package_info_plus:preReleaseBuild UP-TO-DATE
+> Task :package_info_plus:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :package_info_plus:mergeReleaseNativeLibs NO-SOURCE
+> Task :package_info_plus:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :shared_preferences_android:preBuild UP-TO-DATE
+> Task :shared_preferences_android:preReleaseBuild UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared_preferences_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :url_launcher_android:preBuild UP-TO-DATE
+> Task :url_launcher_android:preReleaseBuild UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseNativeLibs NO-SOURCE
+> Task :url_launcher_android:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :geolocator_android:generateReleaseResValues UP-TO-DATE
+> Task :geolocator_android:generateReleaseResources UP-TO-DATE
+> Task :geolocator_android:packageReleaseResources UP-TO-DATE
+> Task :geolocator_android:parseReleaseLocalResources UP-TO-DATE
+> Task :geolocator_android:generateReleaseRFile UP-TO-DATE
+> Task :geolocator_android:javaPreCompileRelease UP-TO-DATE
+> Task :geolocator_android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :geolocator_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :geolocator_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :package_info_plus:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :package_info_plus:generateReleaseResValues UP-TO-DATE
+> Task :package_info_plus:generateReleaseResources UP-TO-DATE
+> Task :package_info_plus:packageReleaseResources UP-TO-DATE
+> Task :package_info_plus:parseReleaseLocalResources UP-TO-DATE
+> Task :package_info_plus:generateReleaseRFile UP-TO-DATE
+> Task :package_info_plus:javaPreCompileRelease UP-TO-DATE
+> Task :shared_preferences_android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared_preferences_android:generateReleaseResValues UP-TO-DATE
+> Task :shared_preferences_android:generateReleaseResources UP-TO-DATE
+> Task :shared_preferences_android:packageReleaseResources UP-TO-DATE
+> Task :shared_preferences_android:parseReleaseLocalResources UP-TO-DATE
+> Task :shared_preferences_android:generateReleaseRFile UP-TO-DATE
+> Task :shared_preferences_android:javaPreCompileRelease UP-TO-DATE
+> Task :url_launcher_android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :url_launcher_android:generateReleaseBuildConfig UP-TO-DATE
+> Task :url_launcher_android:generateReleaseResValues UP-TO-DATE
+> Task :url_launcher_android:generateReleaseResources UP-TO-DATE
+> Task :url_launcher_android:packageReleaseResources UP-TO-DATE
+> Task :url_launcher_android:parseReleaseLocalResources UP-TO-DATE
+> Task :url_launcher_android:generateReleaseRFile UP-TO-DATE
+> Task :url_launcher_android:compileReleaseKotlin UP-TO-DATE
+> Task :url_launcher_android:javaPreCompileRelease UP-TO-DATE
+> Task :package_info_plus:compileReleaseKotlin
+> Task :url_launcher_android:compileReleaseJavaWithJavac
+> Task :package_info_plus:compileReleaseJavaWithJavac NO-SOURCE
+> Task :package_info_plus:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :package_info_plus:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :url_launcher_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :app:buildKotlinToolingMetadata UP-TO-DATE
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :geolocator_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :package_info_plus:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared_preferences_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :url_launcher_android:writeReleaseAarMetadata UP-TO-DATE
+> Task :app:checkReleaseAarMetadata UP-TO-DATE
+> Task :app:cleanMergeReleaseAssets
+> Task :app:mergeReleaseShaders UP-TO-DATE
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :geolocator_android:mergeReleaseShaders UP-TO-DATE
+> Task :geolocator_android:compileReleaseShaders NO-SOURCE
+> Task :geolocator_android:generateReleaseAssets UP-TO-DATE
+> Task :geolocator_android:mergeReleaseAssets UP-TO-DATE
+> Task :package_info_plus:mergeReleaseShaders UP-TO-DATE
+> Task :package_info_plus:compileReleaseShaders NO-SOURCE
+> Task :package_info_plus:generateReleaseAssets UP-TO-DATE
+> Task :package_info_plus:mergeReleaseAssets UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseShaders UP-TO-DATE
+> Task :shared_preferences_android:compileReleaseShaders NO-SOURCE
+> Task :shared_preferences_android:generateReleaseAssets UP-TO-DATE
+> Task :shared_preferences_android:mergeReleaseAssets UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseShaders UP-TO-DATE
+> Task :url_launcher_android:compileReleaseShaders NO-SOURCE
+> Task :url_launcher_android:generateReleaseAssets UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:copyFlutterAssetsRelease
+> Task :app:generateReleaseResValues UP-TO-DATE
+> Task :app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :app:generateReleaseResources UP-TO-DATE
+> Task :app:stripReleaseDebugSymbols
+> Task :app:mergeReleaseResources UP-TO-DATE
+> Task :app:packageReleaseResources UP-TO-DATE
+> Task :app:parseReleaseLocalResources UP-TO-DATE
+> Task :app:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksRelease UP-TO-DATE
+> Task :geolocator_android:extractDeepLinksRelease UP-TO-DATE
+> Task :geolocator_android:processReleaseManifest UP-TO-DATE
+> Task :package_info_plus:extractDeepLinksRelease UP-TO-DATE
+> Task :package_info_plus:processReleaseManifest UP-TO-DATE
+> Task :shared_preferences_android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared_preferences_android:processReleaseManifest UP-TO-DATE
+> Task :url_launcher_android:extractDeepLinksRelease UP-TO-DATE
+> Task :url_launcher_android:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseMainManifest UP-TO-DATE
+> Task :app:outputReleaseAppLinkSettings UP-TO-DATE
+> Task :app:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseManifestForPackage UP-TO-DATE
+> Task :app:processReleaseResources UP-TO-DATE
+> Task :geolocator_android:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :app:javaPreCompileRelease UP-TO-DATE
+> Task :geolocator_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :package_info_plus:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared_preferences_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :url_launcher_android:prepareReleaseArtProfile UP-TO-DATE
+> Task :app:mergeReleaseArtProfile UP-TO-DATE
+> Task :geolocator_android:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :url_launcher_android:bundleLibCompileToJarRelease
+> Task :package_info_plus:bundleLibCompileToJarRelease
+> Task :package_info_plus:bundleLibRuntimeToJarRelease
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :geolocator_android:processReleaseJavaRes NO-SOURCE
+> Task :url_launcher_android:bundleLibRuntimeToJarRelease
+> Task :package_info_plus:processReleaseJavaRes
+> Task :url_launcher_android:processReleaseJavaRes
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :geolocator_android:createFullJarRelease
+> Task :geolocator_android:extractProguardFiles
+> Task :app:extractReleaseNativeSymbolTables
+> Task :geolocator_android:generateReleaseLintModel
+> Task :app:mergeReleaseNativeDebugMetadata UP-TO-DATE
+> Task :geolocator_android:prepareLintJarForPublish UP-TO-DATE
+> Task :package_info_plus:createFullJarRelease
+> Task :package_info_plus:extractProguardFiles
+> Task :package_info_plus:generateReleaseLintModel
+> Task :shared_preferences_android:compileReleaseKotlin
+> Task :package_info_plus:prepareLintJarForPublish UP-TO-DATE
+> Task :shared_preferences_android:compileReleaseJavaWithJavac
+> Task :shared_preferences_android:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:bundleLibCompileToJarRelease
+> Task :shared_preferences_android:processReleaseJavaRes
+> Task :shared_preferences_android:bundleLibRuntimeToJarRelease
+> Task :shared_preferences_android:createFullJarRelease
+> Task :shared_preferences_android:extractProguardFiles
+> Task :shared_preferences_android:generateReleaseLintModel
+> Task :shared_preferences_android:prepareLintJarForPublish UP-TO-DATE
+> Task :url_launcher_android:createFullJarRelease
+> Task :url_launcher_android:extractProguardFiles
+> Task :url_launcher_android:generateReleaseLintModel
+> Task :url_launcher_android:prepareLintJarForPublish UP-TO-DATE
+> Task :geolocator_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :geolocator_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :geolocator_android:copyReleaseJniLibsProjectAndLocalJars
+> Task :geolocator_android:extractReleaseAnnotations
+> Task :geolocator_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :package_info_plus:stripReleaseDebugSymbols NO-SOURCE
+> Task :package_info_plus:copyReleaseJniLibsProjectAndLocalJars
+> Task :package_info_plus:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :package_info_plus:extractReleaseAnnotations
+> Task :package_info_plus:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :shared_preferences_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :shared_preferences_android:copyReleaseJniLibsProjectAndLocalJars
+> Task :shared_preferences_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :shared_preferences_android:extractReleaseAnnotations
+> Task :shared_preferences_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :geolocator_android:mergeReleaseJavaResource
+> Task :package_info_plus:mergeReleaseJavaResource
+> Task :shared_preferences_android:mergeReleaseJavaResource
+> Task :geolocator_android:syncReleaseLibJars
+> Task :geolocator_android:bundleReleaseLocalLintAar
+> Task :package_info_plus:syncReleaseLibJars
+> Task :package_info_plus:bundleReleaseLocalLintAar
+> Task :shared_preferences_android:syncReleaseLibJars
+> Task :shared_preferences_android:bundleReleaseLocalLintAar
+> Task :url_launcher_android:stripReleaseDebugSymbols NO-SOURCE
+> Task :url_launcher_android:copyReleaseJniLibsProjectAndLocalJars
+> Task :url_launcher_android:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :url_launcher_android:extractReleaseAnnotations
+> Task :url_launcher_android:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :url_launcher_android:mergeReleaseJavaResource
+> Task :url_launcher_android:syncReleaseLibJars
+> Task :url_launcher_android:bundleReleaseLocalLintAar
+> Task :geolocator_android:writeReleaseLintModelMetadata
+> Task :package_info_plus:writeReleaseLintModelMetadata
+> Task :shared_preferences_android:writeReleaseLintModelMetadata
+> Task :url_launcher_android:writeReleaseLintModelMetadata
+> Task :geolocator_android:generateReleaseLintVitalModel
+> Task :package_info_plus:generateReleaseLintVitalModel
+> Task :shared_preferences_android:generateReleaseLintVitalModel
+> Task :url_launcher_android:generateReleaseLintVitalModel
+> Task :app:compileReleaseKotlin
+> Task :app:collectReleaseDependencies
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :app:processReleaseJavaRes
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:mergeReleaseJavaResource
+> Task :package_info_plus:lintVitalAnalyzeRelease
+> Task :geolocator_android:lintVitalAnalyzeRelease
+> Task :url_launcher_android:lintVitalAnalyzeRelease
+> Task :shared_preferences_android:lintVitalAnalyzeRelease
+> Task :app:minifyReleaseWithR8
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+
+[Incubating] Problems report is available at: file:///C:/Users/Qazx1/Desktop/invotaxi/app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 58s
+204 actionable tasks: 95 executed, 109 up-to-date
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "0" == "0" goto mainEnd 
+
+C:\Users\Qazx1\Desktop\invotaxi\app\android>if "Windows_NT" == "Windows_NT" endlocal

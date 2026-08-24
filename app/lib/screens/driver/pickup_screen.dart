@@ -2,14 +2,40 @@ import 'package:flutter/material.dart';
 import '../../theme/app_palette.dart';
 import '../../state/app_state.dart';
 import '../../state/app_scope.dart';
+import '../../services/external_navigation.dart';
+import '../../models/models.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/common.dart';
 import '../../widgets/map_background.dart';
 import '../../widgets/page_header.dart';
+import '../shared/map_picker_screen.dart';
 import 'force_majeure_screen.dart';
 
 class PickupScreen extends StatelessWidget {
   const PickupScreen({super.key});
+
+  Future<void> _correctPickup(BuildContext context, DriverOrder order) async {
+    final place = await Navigator.of(context).push<Place>(
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          title: 'Уточнить точку посадки',
+          latitude: order.pickupLat,
+          longitude: order.pickupLon,
+        ),
+      ),
+    );
+    if (place == null || !context.mounted) return;
+    try {
+      await context.appRead.correctDriverOrderAddress(
+        order: order,
+        pickup: true,
+        place: place,
+      );
+      if (context.mounted) showToast(context, 'Точка посадки обновлена');
+    } on Exception catch (error) {
+      if (context.mounted) showToast(context, error.toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +100,27 @@ class PickupScreen extends StatelessWidget {
                   value: order?.to ?? 'Адрес не указан',
                 ),
                 const SizedBox(height: 20),
+                PrimaryButton(
+                  label: 'Открыть маршрут в Яндекс / 2ГИС',
+                  kind: PrimaryButtonKind.outline,
+                  onPressed: order == null
+                      ? null
+                      : () => showExternalNavigationPicker(
+                          context,
+                          destination: order.from,
+                          latitude: order.pickupLat,
+                          longitude: order.pickupLon,
+                        ),
+                ),
+                const SizedBox(height: 10),
+                PrimaryButton(
+                  label: 'Исправить точку посадки на карте',
+                  kind: PrimaryButtonKind.outline,
+                  onPressed: order == null
+                      ? null
+                      : () => _correctPickup(context, order),
+                ),
+                const SizedBox(height: 10),
                 PrimaryButton(
                   label: 'Я приехал',
                   onPressed: () => app.setDriverStage(DriverStage.waiting),

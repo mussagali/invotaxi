@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # Local UI bootstrap only. It is rejected unless ENV=dev and this flag is true.
     dev_auto_register: bool = False
     dev_app_password: str = ""
+    # Short-lived test access for the installed mobile app. Keep disabled in
+    # normal production operation; the password must be explicitly configured.
+    test_auto_register: bool = False
+    test_app_password: str = ""
 
     @property
     def cors_origins(self) -> list[str]:

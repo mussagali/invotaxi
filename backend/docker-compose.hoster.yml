@@ -1,0 +1,106 @@
+services:
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.hoster:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 96m
+    restart: unless-stopped
+
+  api:
+    build: .
+    image: invotaxi-backend:hoster
+    command: >-
+      sh -c "alembic upgrade head &&
+      python scripts/seed_access_users.py &&
+      exec gunicorn app.main:app -c gunicorn.conf.py -k uvicorn.workers.UvicornWorker
+      -w 1 -b 0.0.0.0:8000 --timeout 0 --graceful-timeout 30"
+    env_file: .env
+    environment:
+      ENV: prod
+      API_WORKERS: "1"
+    volumes:
+      - reports:/data/reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    mem_limit: 512m
+    restart: unless-stopped
+
+  worker:
+    image: invotaxi-backend:hoster
+    command: arq app.workers.main.WorkerSettings
+    env_file: .env
+    environment:
+      ENV: prod
+    volumes:
+      - reports:/data/reports
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 512m
+    restart: unless-stopped
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    command:
+      - postgres
+      - -c
+      - shared_buffers=96MB
+      - -c
+      - effective_cache_size=384MB
+      - -c
+      - max_connections=30
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: >-
+      redis-server --appendonly yes --maxmemory 64mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 96m
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  reports:
+  caddy_data:
+  caddy_config:

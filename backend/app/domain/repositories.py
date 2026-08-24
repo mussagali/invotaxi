@@ -148,6 +148,29 @@ class OrdersRepository:
         driver_id: uuid.UUID | None = await self.session.scalar(stmt)
         return driver_id
 
+    async def assigned_driver_rows(
+        self, order_ids: builtins.list[uuid.UUID]
+    ) -> dict[uuid.UUID, tuple[Driver, str | None]]:
+        if not order_ids:
+            return {}
+        rows = await self.session.execute(
+            select(RouteAssignment, Driver, User.phone)
+            .join(RoutePlan, RoutePlan.id == RouteAssignment.plan_id)
+            .join(Driver, Driver.user_id == RouteAssignment.driver_id)
+            .join(User, User.id == Driver.user_id)
+            .where(
+                RoutePlan.status == PlanStatus.published,
+                RouteAssignment.order_ids.overlap(order_ids),
+            )
+            .order_by(RoutePlan.published_at.desc().nullslast(), RoutePlan.created_at.desc())
+        )
+        result: dict[uuid.UUID, tuple[Driver, str | None]] = {}
+        for assignment, driver, phone in rows:
+            for order_id in assignment.order_ids:
+                if order_id in order_ids and order_id not in result:
+                    result[order_id] = (driver, phone)
+        return result
+
     def add(self, order: Order) -> Order:
         self.session.add(order)
         return order

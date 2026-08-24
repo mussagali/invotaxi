@@ -647,6 +647,66 @@ async def test_client_and_driver_order_responses_hide_planned_times(
         _assert_no_planned_fields(body)
 
 
+async def test_dispatcher_can_assign_manually_and_driver_sees_order(
+    app_with_client: AppClient,
+) -> None:
+    app, client = app_with_client
+    service_date = date.today() + timedelta(days=40)
+    district = "manual-assignment"
+    await _create_user(app, "7106000090", UserRole.dispatcher)
+    client_id = await _create_user(app, "7106000091", UserRole.client)
+    driver_id = await _create_user(
+        app, "7106000092", UserRole.driver, district=district, online=False
+    )
+    order_id = await _create_order(app, client_id, service_date, time(10, 20))
+    dispatcher_headers = await _headers(client, "7106000090")
+    driver_headers = await _headers(client, "7106000092")
+
+    candidates = await client.get(
+        f"/api/v1/dispatch/candidates/{order_id}", headers=dispatcher_headers
+    )
+    assert candidates.status_code == 200, candidates.text
+    assert str(driver_id) in {row["driver_id"] for row in candidates.json()["candidates"]}
+
+    assigned = await client.post(
+        f"/api/v1/dispatch/assign/{order_id}",
+        json={"driver_id": str(driver_id)},
+        headers=dispatcher_headers,
+    )
+    assert assigned.status_code == 200, assigned.text
+    assert assigned.json()["order"]["status"] == "assigned"
+    assert assigned.json()["order"]["assigned_driver"]["id"] == str(driver_id)
+
+    visible = await client.get("/api/v1/orders", headers=driver_headers)
+    assert visible.status_code == 200, visible.text
+    assert [row["id"] for row in visible.json()] == [str(order_id)]
+
+    admin_list = await client.get("/api/v1/orders", headers=dispatcher_headers)
+    row = next(item for item in admin_list.json() if item["id"] == str(order_id))
+    assert row["assigned_driver"]["id"] == str(driver_id)
+
+
+async def test_automatic_assignment_chooses_online_driver(
+    app_with_client: AppClient,
+) -> None:
+    app, client = app_with_client
+    service_date = date.today() + timedelta(days=41)
+    await _create_user(app, "7106000093", UserRole.dispatcher)
+    client_id = await _create_user(app, "7106000094", UserRole.client)
+    driver_id = await _create_user(
+        app, "7106000095", UserRole.driver, district="auto-assignment", online=True
+    )
+    order_id = await _create_order(app, client_id, service_date, time(11, 20))
+    headers = await _headers(client, "7106000093")
+
+    assigned = await client.post(
+        f"/api/v1/dispatch/assign/{order_id}", json={}, headers=headers
+    )
+    assert assigned.status_code == 200, assigned.text
+    assert assigned.json()["driver_id"] == str(driver_id)
+    assert assigned.json()["auto_assigned"] is True
+
+
 async def test_job_excludes_orders_planned_in_another_district(
     app_with_client: AppClient,
 ) -> None:

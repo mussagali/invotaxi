@@ -1,14 +1,17 @@
 """Dispatcher-facing client directory backed by real user/profile records."""
 
+import secrets
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, require_roles
-from app.domain.enums import UserRole
+from app.core.security import hash_password, normalize_phone
+from app.domain.enums import UserRole, UserStatus
 from app.domain.models import ClientProfile, Order, User
 from app.domain.schemas import ClientAdminOut, ClientAdminPatch, ClientStatsOut
 
@@ -47,7 +50,7 @@ async def list_clients(
         select(User, ClientProfile, func.coalesce(order_counts.c.orders_count, 0))
         .join(ClientProfile, ClientProfile.user_id == User.id)
         .outerjoin(order_counts, order_counts.c.client_id == User.id)
-        .where(User.role == UserRole.client)
+        .where(User.role == UserRole.client, User.status == UserStatus.active)
         .order_by(ClientProfile.full_name, User.id)
         .limit(limit)
         .offset(offset)
@@ -73,6 +76,8 @@ async def client_stats(
                 func.count(ClientProfile.user_id),
                 func.count(ClientProfile.user_id).filter(ClientProfile.needs_escort.is_(True)),
             )
+            .join(User, User.id == ClientProfile.user_id)
+            .where(User.status == UserStatus.active)
         )
     ).one()
     total_orders = await session.scalar(select(func.count(Order.id)))
@@ -95,7 +100,11 @@ async def get_client(
             select(User, ClientProfile, func.count(Order.id))
             .join(ClientProfile, ClientProfile.user_id == User.id)
             .outerjoin(Order, Order.client_id == User.id)
-            .where(User.id == client_id, User.role == UserRole.client)
+            .where(
+                User.id == client_id,
+                User.role == UserRole.client,
+                User.status == UserStatus.active,
+            )
             .group_by(User.id, ClientProfile.user_id)
         )
     ).one_or_none()
@@ -116,9 +125,44 @@ async def patch_client(
     profile = await session.get(ClientProfile, client_id)
     if user is None or profile is None or user.role != UserRole.client:
         raise HTTPException(status_code=404, detail="client not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    values = body.model_dump(exclude_unset=True)
+    phone = values.pop("phone", None)
+    if phone is not None:
+        try:
+            user.phone = normalize_phone(phone)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    for field, value in values.items():
         setattr(profile, field, value)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="phone already registered") from exc
     await session.refresh(profile)
     count = await session.scalar(select(func.count(Order.id)).where(Order.client_id == client_id))
     return _out(user, profile, int(count or 0))
+
+
+@router.delete("/{client_id}", status_code=204)
+async def archive_client(
+    client_id: uuid.UUID,
+    actor: Dispatcher,
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> Response:
+    """Remove a client from the directory while retaining anonymous order history."""
+    del actor
+    user = await session.get(User, client_id)
+    profile = await session.get(ClientProfile, client_id)
+    if user is None or profile is None or user.role != UserRole.client:
+        raise HTTPException(status_code=404, detail="client not found")
+    user.phone = f"deleted-{client_id}"
+    user.full_name = "Удалённый пользователь"
+    user.password_hash = hash_password(secrets.token_urlsafe(32))
+    user.status = UserStatus.blocked
+    profile.full_name = "Удалённый пользователь"
+    profile.needs_escort = False
+    profile.notes = None
+    profile.default_addresses = []
+    await session.commit()
+    return Response(status_code=204)

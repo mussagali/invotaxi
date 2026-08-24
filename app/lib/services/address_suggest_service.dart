@@ -7,6 +7,51 @@ import '../models/models.dart';
 import 'location_context_service.dart';
 
 class AddressSuggestService {
+  static Future<Place> reverseGeocode({
+    required double latitude,
+    required double longitude,
+    CityLocationContext? context,
+  }) async {
+    final fallback = Place(
+      '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
+      'Точка выбрана на карте',
+      lat: latitude,
+      lon: longitude,
+    );
+    final key = AppEnv.yandexMapsApiKey.trim();
+    if (key.isEmpty) return fallback;
+    try {
+      final response = await http
+          .get(
+            Uri.https('geocode-maps.yandex.ru', '/v1/', {
+              'apikey': key,
+              'geocode': '$longitude,$latitude',
+              'lang': 'ru_RU',
+              'format': 'json',
+              'results': '1',
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return fallback;
+      final object = _firstObject(jsonDecode(response.body));
+      if (object == null) return fallback;
+      final coordinates = _coordinates(object);
+      if (coordinates == null ||
+          (context != null &&
+              !context.bounds.contains(coordinates.$2, coordinates.$1))) {
+        return fallback;
+      }
+      return Place(
+        object['name']?.toString() ?? fallback.title,
+        object['description']?.toString() ?? '',
+        lat: coordinates.$2,
+        lon: coordinates.$1,
+      );
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   static Future<List<Place>> search(
     String query,
     CityLocationContext context,

@@ -6,9 +6,11 @@ from typing import Annotated, Any, NoReturn
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, get_redis, get_token_payload, require_roles
+from app.core.security import normalize_phone
 from app.domain.enums import UserRole, UserStatus
 from app.domain.models import Driver, User
 from app.domain.schemas import (
@@ -146,8 +148,19 @@ async def patch_driver(
     session: Annotated[AsyncSession, Depends(get_db)],
     redis: Annotated[Redis, Depends(get_redis)],
 ) -> DriverOut:
+    if body.phone is not None:
+        user = await session.get(User, driver_id)
+        if user is None or user.role != UserRole.driver:
+            raise HTTPException(status_code=404, detail="driver not found")
+        try:
+            user.phone = normalize_phone(body.phone)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         driver = await DriversService(session, redis).patch(driver_id, body)
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail="phone already registered") from exc
     except DriverServiceError as exc:
         _raise_service_error(exc)
     user = await session.get(User, driver.user_id)

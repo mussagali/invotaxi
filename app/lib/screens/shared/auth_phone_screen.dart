@@ -4,6 +4,7 @@ import '../../theme/app_palette.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/inputs.dart';
 import '../../state/app_scope.dart';
+import '../../services/legal_links.dart';
 import 'auth_otp_screen.dart';
 
 class AuthPhoneScreen extends StatefulWidget {
@@ -107,24 +108,15 @@ class _Terms extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
-    return Text.rich(
-      TextSpan(
-        style: TextStyle(
-          fontSize: 12,
-          height: 1.4,
-          fontWeight: FontWeight.w500,
-          color: p.textTertiary,
-        ),
-        children: [
-          const TextSpan(text: 'Регистрируясь, вы соглашаетесь с '),
-          TextSpan(
-            text: 'условиями использования',
-            style: TextStyle(color: p.brand, fontWeight: FontWeight.w600),
-          ),
-          const TextSpan(text: ' и передачей данных.'),
-        ],
-      ),
-      textAlign: TextAlign.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text('Регистрируясь, вы соглашаетесь с ', style: TextStyle(fontSize: 12, color: p.textTertiary)),
+        TextButton(onPressed: () => openLegalUrl(termsUrl), child: const Text('условиями использования')),
+        Text(' и ', style: TextStyle(fontSize: 12, color: p.textTertiary)),
+        TextButton(onPressed: () => openLegalUrl(privacyUrl), child: const Text('политикой конфиденциальности.')),
+      ],
     );
   }
 }

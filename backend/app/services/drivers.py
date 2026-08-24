@@ -98,6 +98,7 @@ class DriversService:
     async def patch(self, driver_id: uuid.UUID, body: DriverPatch) -> Driver:
         driver = await self._get(driver_id)
         values = body.model_dump(exclude_unset=True)
+        values.pop("phone", None)
         requested_online = values.pop("is_online", None)
         for field, value in values.items():
             setattr(driver, field, value)

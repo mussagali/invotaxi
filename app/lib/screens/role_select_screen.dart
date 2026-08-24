@@ -4,7 +4,7 @@ import '../state/app_scope.dart';
 import '../widgets/common.dart';
 import 'passenger/onboarding_screen.dart';
 import 'driver/driver_onboarding_screen.dart';
-import 'shared/legal_screen.dart';
+import '../services/legal_links.dart';
 
 /// Entry launcher letting you experience either the passenger or the driver app
 /// (in the real product these ship as two separate apps).
@@ -86,21 +86,11 @@ class RoleSelectScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const LegalScreen(document: LegalDocument.privacy),
-                      ),
-                    ),
+                    onPressed: () => openLegalUrl(privacyUrl),
                     child: const Text('Конфиденциальность'),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const LegalScreen(document: LegalDocument.terms),
-                      ),
-                    ),
+                    onPressed: () => openLegalUrl(termsUrl),
                     child: const Text('Соглашение'),
                   ),
                 ],

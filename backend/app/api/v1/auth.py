@@ -70,14 +70,20 @@ async def dev_login(
     auth: Annotated[AuthService, Depends(get_auth_service)],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> LoginResponse:
-    """Create a local UI account on first login; never available in production."""
+    """Create a test mobile account on first login when explicitly enabled."""
     settings = request.app.state.settings
-    if (
-        settings.env != "dev"
-        or not settings.dev_auto_register
-        or not settings.dev_app_password
-        or body.password != settings.dev_app_password
-    ):
+    local_registration_enabled = (
+        settings.env == "dev"
+        and settings.dev_auto_register
+        and bool(settings.dev_app_password)
+        and body.password == settings.dev_app_password
+    )
+    test_registration_enabled = (
+        settings.test_auto_register
+        and bool(settings.test_app_password)
+        and body.password == settings.test_app_password
+    )
+    if not (local_registration_enabled or test_registration_enabled):
         raise HTTPException(status_code=404, detail="not found")
 
     try:

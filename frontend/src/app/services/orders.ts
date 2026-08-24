@@ -23,7 +23,7 @@ export interface Order {
     car_model: string;
     plate_number: string;
     user: {
-      id: number;
+      id: string;
       phone: string;
     };
   } | null;
@@ -106,7 +106,7 @@ export const ORDERS_MAX_PAGE_SIZE = 50;
 export interface OrdersListParams {
   status?: string;
   passenger_id?: string;
-  driver_id?: number;
+  driver_id?: string;
   page?: number;
   page_size?: number;
   search?: string;
@@ -158,7 +158,7 @@ export interface ImportError {
 
 export interface ExportParams {
   status?: string;
-  driver_id?: number;
+  driver_id?: string;
   date_from?: string;
   date_to?: string;
   /** Все статусы (не только назначенные/в пути) */
@@ -209,6 +209,11 @@ function backendStatus(status: string): string {
   return status === "ride_ongoing" ? "picked_up" : status === "pending" ? "created" : status;
 }
 
+const backendStatusGroups: Record<string, string[]> = {
+  waiting: ["created", "scheduled", "assigned"],
+  on_the_way: ["driver_en_route", "picked_up"],
+};
+
 function adaptOrder(raw: any): Order {
   const pickupLat = raw.pickup_lat ?? 0;
   const pickupLon = raw.pickup_lon ?? 0;
@@ -224,8 +229,14 @@ function adaptOrder(raw: any): Order {
       region: { id: "Атырау", title: "Атырау" },
       allowed_companion: raw.escort,
     },
-    driver: null,
-    driver_id: null,
+    driver: raw.assigned_driver ? {
+      id: raw.assigned_driver.id,
+      name: raw.assigned_driver.name,
+      car_model: raw.assigned_driver.car_model || "—",
+      plate_number: raw.assigned_driver.plate_number || "—",
+      user: { id: raw.assigned_driver.id, phone: raw.assigned_driver.phone || "" },
+    } : null,
+    driver_id: raw.assigned_driver?.id || null,
     region: { id: "Атырау", title: "Атырау" },
     pickup_title: raw.pickup_addr || "Адрес не указан",
     dropoff_title: raw.dropoff_addr || "Адрес не указан",
@@ -246,17 +257,22 @@ function adaptOrder(raw: any): Order {
 }
 
 async function loadOrders(params?: OrdersListParams, signal?: AbortSignal): Promise<Order[]> {
+  const requestedStatus = params?.status;
+  const statuses = requestedStatus ? backendStatusGroups[requestedStatus] : undefined;
   const response = await api.get<any[]>("/orders", {
     params: {
       limit: 100,
       offset: ((params?.page ?? 1) - 1) * (params?.page_size ?? ORDERS_PAGE_SIZE),
-      status: params?.status ? backendStatus(params.status) : undefined,
+      status: requestedStatus && !statuses ? backendStatus(requestedStatus) : undefined,
       client_id: params?.passenger_id,
       service_date: params?.plan_date,
     },
     signal,
   });
   let orders = response.data.map(adaptOrder);
+  if (statuses) {
+    orders = orders.filter((item) => statuses.includes(backendStatus(item.status)));
+  }
   if (params?.search) {
     const query = params.search.toLowerCase();
     orders = orders.filter((item) => `${item.id} ${item.pickup_title} ${item.dropoff_title}`.toLowerCase().includes(query));
@@ -327,6 +343,34 @@ export const ordersApi = {
    * Создать новый заказ
    */
   async createOrder(data: CreateOrderRequest): Promise<Order> {
+    let clientId = data.passenger_id;
+    if (!clientId && data.passenger_phone?.trim()) {
+      const digits = data.passenger_phone.replace(/\D/g, '').slice(-10);
+      const clients = (await api.get<any[]>('/clients', {
+        params: { search: digits, limit: 20 },
+      })).data;
+      const existing = clients.find((client) =>
+        String(client.phone || '').replace(/\D/g, '').slice(-10) === digits
+      );
+      if (existing) {
+        clientId = existing.user_id;
+      } else {
+        const created = await api.post<{ user: { id: string } }>('/auth/users', {
+          phone: data.passenger_phone,
+          password: '1111',
+          role: 'client',
+          client_profile: {
+            full_name: data.passenger_name?.trim() || `Пассажир ${data.passenger_phone}`,
+            needs_escort: Boolean(data.passenger_allowed_companion),
+            notes: data.passenger_disability_category || null,
+          },
+        });
+        clientId = created.data.user.id;
+      }
+    }
+    if (!clientId) {
+      throw new Error('Выберите существующего пассажира или укажите телефон нового пассажира');
+    }
     const desired = new Date(data.desired_pickup_time);
     const serviceDate = Number.isNaN(desired.getTime())
       ? data.desired_pickup_time.slice(0, 10)
@@ -335,7 +379,7 @@ export const ordersApi = {
       ? data.desired_pickup_time.slice(11, 19)
       : desired.toLocaleTimeString("en-GB", { timeZone: "Asia/Atyrau", hour12: false });
     const response = await api.post("/orders", {
-      client_id: data.passenger_id,
+      client_id: clientId,
       service_date: serviceDate,
       desired_time: desiredTime,
       pickup_addr: data.pickup_title,

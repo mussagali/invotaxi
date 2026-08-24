@@ -95,11 +95,15 @@ export const passengersApi = {
     allowed_companion?: boolean; is_verified?: boolean; phone?: string; email?: string;
   }): Promise<Passenger> {
     const response = await api.patch<BackendClient>(`/clients/${passengerId}`, {
+      phone: data.phone,
       full_name: data.full_name,
       needs_escort: data.allowed_companion,
       notes: data.disability_category,
     });
     return adapt(response.data);
+  },
+  async deletePassenger(passengerId: string): Promise<void> {
+    await api.delete(`/clients/${passengerId}`);
   },
   async searchPassengersByPhone(phone: string): Promise<Passenger[]> {
     return phone.trim() ? load({ phone: phone.trim() }) : [];

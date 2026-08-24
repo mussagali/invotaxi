@@ -222,9 +222,9 @@ export function Passengers() {
   const handleDeletePassenger = async () => {
     if (deleteModal) {
       try {
-        // TODO: Реализовать удаление через API
-        // await passengersApi.deletePassenger(Number(deleteModal));
-        setPassengers(passengers.filter((p) => p.id !== deleteModal));
+        await passengersApi.deletePassenger(deleteModal);
+        await refreshPassengers();
+        toast.success("Пассажир удалён");
         setDeleteModal(null);
       } catch (err: any) {
         setError(err.message || "Ошибка удаления пассажира");

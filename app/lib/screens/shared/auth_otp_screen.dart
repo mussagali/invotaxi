@@ -49,6 +49,12 @@ class _AuthOtpScreenState extends State<AuthOtpScreen> {
       );
     } on ApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'Не удалось войти. Проверьте интернет и повторите попытку.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

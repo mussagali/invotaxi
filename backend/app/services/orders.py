@@ -26,6 +26,19 @@ from app.services.telemetry import get_driver_position
 
 MAX_ACTIVE_ORDERS_PER_DATE = 4
 EDITABLE_STATUSES = (OrderStatus.created, OrderStatus.scheduled)
+DRIVER_ADDRESS_CORRECTION_STATUSES = (
+    OrderStatus.assigned,
+    OrderStatus.driver_en_route,
+    OrderStatus.picked_up,
+)
+DRIVER_ADDRESS_CORRECTION_FIELDS = {
+    "pickup_addr",
+    "pickup_lat",
+    "pickup_lon",
+    "dropoff_addr",
+    "dropoff_lat",
+    "dropoff_lon",
+}
 
 
 class OrderServiceError(Exception):
@@ -168,14 +181,17 @@ class OrdersService:
 
     async def patch(self, order_id: uuid.UUID, body: OrderPatch, actor: User) -> Order:
         order = await self.get_visible(order_id, actor)
-        if actor.role == UserRole.driver:
-            raise OrderServiceError("order not found", 404)
         locked_order = await self.repo.get_for_update(order.id)
         assert locked_order is not None
-        if locked_order.status not in EDITABLE_STATUSES:
+        values = body.model_dump(exclude_unset=True)
+        if actor.role == UserRole.driver:
+            if not set(values).issubset(DRIVER_ADDRESS_CORRECTION_FIELDS):
+                raise OrderServiceError("driver can only correct order addresses", 403)
+            if locked_order.status not in DRIVER_ADDRESS_CORRECTION_STATUSES:
+                raise OrderServiceError("order address can no longer be corrected", 409)
+        elif locked_order.status not in EDITABLE_STATUSES:
             raise OrderServiceError("order can only be edited while created or scheduled", 409)
 
-        values = body.model_dump(exclude_unset=True)
         for field, value in values.items():
             setattr(locked_order, field, value)
         if "escort" in values:

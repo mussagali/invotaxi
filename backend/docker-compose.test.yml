@@ -1,0 +1,102 @@
+services:
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      TEST_DOMAIN: ${TEST_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.test:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
+        VITE_ALLOW_DEV_LOGIN: ${VITE_ALLOW_DEV_LOGIN:-false}
+        VITE_YANDEX_MAPS_API_KEY: ${VITE_YANDEX_MAPS_API_KEY:-}
+        VITE_YANDEX_MAPS_SUGGEST_API_KEY: ${VITE_YANDEX_MAPS_SUGGEST_API_KEY:-}
+        VITE_LEGAL_CONTACT_EMAIL: ${VITE_LEGAL_CONTACT_EMAIL:-support@invotaxi.kz}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build: .
+    command: >-
+      sh -c "alembic upgrade head &&
+      python scripts/seed_access_users.py &&
+      exec gunicorn app.main:app -c gunicorn.conf.py -k uvicorn.workers.UvicornWorker
+      -w $${API_WORKERS:-2} -b 0.0.0.0:8000 --timeout 0 --graceful-timeout 30"
+    env_file: .env
+    environment:
+      ENV: prod
+    volumes:
+      - reports:/data/reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: arq app.workers.main.WorkerSettings
+    env_file: .env
+    environment:
+      ENV: prod
+    volumes:
+      - reports:/data/reports
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  reports:
+  caddy_data:
+  caddy_config:

@@ -578,7 +578,8 @@ class PlansService:
             )
         )
         for item in previous:
-            item.status = PlanStatus.archived
+            if not (item.stats or {}).get("contains_immediate_assignments"):
+                item.status = PlanStatus.archived
         assignments = await self.repository.assignments(plan.id)
         order_ids = {item for row in assignments for item in row.order_ids}
         orders = {

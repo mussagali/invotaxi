@@ -104,7 +104,7 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
   const [viewModal, setViewModal] = useState<string | null>(null);
   const [editModal, setEditModal] = useState<string | null>(null);
   const [assignModal, setAssignModal] = useState<string | null>(null);
-  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [assigning, setAssigning] = useState(false);
@@ -203,8 +203,8 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
   // Маппинг статусов UI -> API
   const statusToApi = (s: string): string | undefined => {
     if (s === "Все") return undefined;
-    if (s === "Ожидание") return "active_queue,assigned,submitted,awaiting_dispatcher_decision";
-    if (s === "В пути") return "driver_en_route,arrived_waiting,ride_ongoing";
+    if (s === "Ожидание") return "waiting";
+    if (s === "В пути") return "on_the_way";
     if (s === "Выполнено") return "completed";
     if (s === "Отменён") return "cancelled";
     return undefined;
@@ -956,7 +956,6 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
           setLoadingCandidates(true);
           setError(null);
           
-          // Проверяем статус заказа и переводим в active_queue если нужно
           const order = orders.find(o => o.id === assignModal);
           
           // Блокируем назначение для завершенных и отмененных заказов
@@ -966,55 +965,6 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
             setCandidates([]);
             setLoadingCandidates(false);
             return;
-          }
-          
-          if (order && order.status !== 'active_queue') {
-            // Проверяем, можно ли перевести в active_queue
-            const canTransitionToQueue = [
-              'submitted',
-              'awaiting_dispatcher_decision',
-              'matching',
-              'cancelled',
-              'rejected'
-            ].includes(order.status);
-            
-            if (canTransitionToQueue) {
-              // Переводим заказ в статус active_queue
-              try {
-                await ordersApi.updateOrderStatus(assignModal, {
-                  status: 'active_queue',
-                  reason: 'Перевод в очередь для назначения водителя'
-                });
-                // Обновляем список заказов
-                await refreshOrders();
-              } catch (statusErr: any) {
-                // Получаем детальное сообщение об ошибке
-                const errorDetails = statusErr.response?.data;
-                let errorMessage = statusErr.message || 'Не удалось перевести заказ в очередь';
-                
-                if (errorDetails?.error) {
-                  errorMessage = errorDetails.error;
-                  if (errorDetails.valid_transitions && Array.isArray(errorDetails.valid_transitions) && errorDetails.valid_transitions.length > 0) {
-                    errorMessage += `\nДопустимые переходы из статуса "${order.status}": ${errorDetails.valid_transitions.join(', ')}`;
-                  }
-                }
-                
-                // Если ошибка связана с недопустимым переходом, пробуем назначить напрямую
-                // endpoint назначения сам обработает статус
-                if (errorDetails?.error?.includes('Недопустимый переход')) {
-                  console.warn(`Не удалось перевести заказ ${assignModal} в очередь, пробуем назначить напрямую`);
-                  // Продолжаем загрузку кандидатов - endpoint назначения сам разберется
-                } else {
-                  setError(errorMessage);
-                  setLoadingCandidates(false);
-                  return;
-                }
-              }
-            } else {
-              // Если нельзя перевести в очередь, пробуем назначить напрямую
-              // endpoint назначения сам переведет заказ в нужный статус
-              console.log(`Заказ ${order.id} в статусе ${order.status}, нельзя перевести в очередь, пробуем назначить напрямую`);
-            }
           }
           
           const response = await dispatchApi.getCandidates(assignModal);
@@ -1455,6 +1405,26 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
     }
   };
 
+  const handleAutoAssign = async () => {
+    if (!assignModal) return;
+    try {
+      setAssigning(true);
+      setError(null);
+      await dispatchApi.assignOrder(assignModal);
+      await refreshOrders();
+      setAssignModal(null);
+      setSelectedDriverId(null);
+      setCandidates([]);
+      toast.success("Заказ передан на автоматическое распределение");
+    } catch (err: any) {
+      const message = err?.response?.data?.error?.message || err?.message || "Не удалось распределить заказ";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   // Сортировка (фильтрация на сервере)
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
@@ -1765,12 +1735,11 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
                       >
                         <Edit className="w-5 h-5" />
                       </button>
-                            {displayOrder.driver === "Неназначен" && 
-                        // Не показываем кнопку для завершенных заказов
-                        order.status !== 'completed' && (
+                            {displayOrder.driver === "Неназначен" &&
+                        !['completed', 'cancelled'].includes(order.status) && (
                         <button
                           onClick={() => setAssignModal(order.id)}
-                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hidden"
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
                           title="Назначить водителя"
                         >
                           <CarIcon className="w-5 h-5" />
@@ -2635,6 +2604,13 @@ export function Orders({ selectedOrderId, onOrderClose }: OrdersProps = {}) {
                 ) : (
                   "Назначить"
                 )}
+              </button>
+              <button
+                onClick={handleAutoAssign}
+                disabled={assigning}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Автораспределение
               </button>
               <button
                 onClick={() => {

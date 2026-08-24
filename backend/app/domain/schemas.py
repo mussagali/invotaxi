@@ -70,6 +70,7 @@ class ClientAdminOut(ClientProfileOut):
 
 
 class ClientAdminPatch(BaseModel):
+    phone: str | None = Field(default=None, min_length=10, max_length=32)
     full_name: str | None = Field(default=None, min_length=1, max_length=200)
     needs_escort: bool | None = None
     notes: str | None = Field(default=None, max_length=2000)
@@ -249,6 +250,14 @@ class OrderPatch(_KazakhstanCoordinates):
         return self
 
 
+class AssignedDriverOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    car_model: str | None = None
+    plate_number: str | None = None
+    phone: str | None = None
+
+
 class OrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -273,6 +282,7 @@ class OrderOut(BaseModel):
     external_id: str | None
     created_at: datetime
     updated_at: datetime
+    assigned_driver: AssignedDriverOut | None = None
 
 
 class CancelOrderRequest(BaseModel):
@@ -327,6 +337,7 @@ class DriverMeOut(BaseModel):
 
 
 class DriverPatch(BaseModel):
+    phone: str | None = Field(default=None, min_length=10, max_length=32)
     full_name: str | None = Field(default=None, min_length=1, max_length=200)
     region: str | None = Field(default=None, min_length=1, max_length=100)
     vehicle_model: str | None = Field(default=None, max_length=200)
@@ -395,6 +406,33 @@ class DispatchInsertResult(BaseModel):
     reason: str | None = None
     plan_id: uuid.UUID | None = None
     driver_id: uuid.UUID | None = None
+
+
+class DispatchCandidateOut(BaseModel):
+    driver_id: uuid.UUID
+    name: str
+    region_id: str
+    car_model: str | None = None
+    capacity: int
+    is_online: bool
+    priority: dict[str, Any] = Field(default_factory=dict)
+
+
+class DispatchCandidatesOut(BaseModel):
+    order_id: uuid.UUID
+    candidates: list[DispatchCandidateOut]
+    count: int
+
+
+class AssignOrderRequest(BaseModel):
+    driver_id: uuid.UUID | None = None
+
+
+class AssignOrderResponse(BaseModel):
+    success: bool
+    driver_id: uuid.UUID
+    auto_assigned: bool = False
+    order: OrderOut
 
 
 class PlanMoveRequest(BaseModel):

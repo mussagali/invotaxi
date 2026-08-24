@@ -6,7 +6,7 @@ import '../../widgets/common.dart';
 import 'personal_info_screen.dart';
 import 'support_screen.dart';
 import 'notifications_screen.dart';
-import 'legal_screen.dart';
+import '../../services/legal_links.dart';
 import '../role_select_screen.dart';
 import '../passenger/dependents_screen.dart';
 import 'tutorial_screen.dart';
@@ -109,22 +109,12 @@ class ProfileScreen extends StatelessWidget {
             _MenuRow(
               icon: Icons.privacy_tip_outlined,
               label: 'Политика конфиденциальности',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const LegalScreen(document: LegalDocument.privacy),
-                ),
-              ),
+              onTap: () => openLegalUrl(privacyUrl),
             ),
             _MenuRow(
               icon: Icons.description_outlined,
               label: 'Пользовательское соглашение',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const LegalScreen(document: LegalDocument.terms),
-                ),
-              ),
+              onTap: () => openLegalUrl(termsUrl),
             ),
             const SizedBox(height: 16),
             InkWell(

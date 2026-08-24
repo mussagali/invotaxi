@@ -64,7 +64,7 @@ async def transition_order(
         order.cancel_reason = reason.strip()
 
     if to_status == OrderStatus.exception:
-        if actor_role not in (None, UserRole.dispatcher):
+        if actor_role not in (None, UserRole.dispatcher, UserRole.admin):
             raise OrderStateError(
                 "only dispatcher or system may mark an exception", status_code=403
             )
@@ -72,7 +72,10 @@ async def transition_order(
         if not isinstance(reason, str) or not reason.strip():
             raise OrderStateError("exception reason is required in meta", status_code=422)
 
-    if from_status == OrderStatus.exception and actor_role != UserRole.dispatcher:
+    if from_status == OrderStatus.exception and actor_role not in (
+        UserRole.dispatcher,
+        UserRole.admin,
+    ):
         raise OrderStateError("only dispatcher may reschedule an exception", status_code=403)
 
     order.status = to_status

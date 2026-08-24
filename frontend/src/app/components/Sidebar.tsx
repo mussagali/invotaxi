@@ -78,7 +78,10 @@ export function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   return (
     <div className="w-64 bg-indigo-900 dark:bg-gray-800 text-white flex flex-col">
       <div className="p-6 border-b border-indigo-800 dark:border-gray-700">
-        <h1 className="text-2xl">InvoTaxi</h1>
+        <div className="flex items-center gap-3 mb-1">
+          <img src="/app-icon.png" alt="InvoTaxi" className="w-10 h-10 rounded-xl" />
+          <h1 className="text-2xl">InvoTaxi</h1>
+        </div>
         <p className="text-indigo-300 dark:text-gray-400 text-sm">Админ-панель</p>
       </div>
 

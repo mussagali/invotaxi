@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../theme/app_palette.dart';
 import '../../state/app_state.dart';
 import '../../state/app_scope.dart';
+import '../../services/external_navigation.dart';
+import '../../models/models.dart';
 import '../../widgets/buttons.dart';
-import '../../widgets/map_background.dart';
 import '../../widgets/page_header.dart';
 import '../shared/emergency_screen.dart';
+import '../shared/map_picker_screen.dart';
 
 class RideStepsScreen extends StatefulWidget {
   const RideStepsScreen({super.key});
@@ -26,6 +28,32 @@ class _RideStepsScreenState extends State<RideStepsScreen> {
       return;
     }
     setState(() => _step++);
+  }
+
+  Future<void> _correctCurrentPoint(DriverOrder order) async {
+    final pickup = _step < 2;
+    final place = await Navigator.of(context).push<Place>(
+      MaterialPageRoute(
+        builder: (_) => MapPickerScreen(
+          title: pickup
+              ? 'Уточнить точку посадки'
+              : 'Уточнить пункт назначения',
+          latitude: pickup ? order.pickupLat : order.dropoffLat,
+          longitude: pickup ? order.pickupLon : order.dropoffLon,
+        ),
+      ),
+    );
+    if (place == null || !mounted) return;
+    try {
+      await context.appRead.correctDriverOrderAddress(
+        order: order,
+        pickup: pickup,
+        place: place,
+      );
+      if (mounted) showToast(context, 'Адрес поездки обновлён');
+    } on Exception catch (error) {
+      if (mounted) showToast(context, error.toString());
+    }
   }
 
   @override
@@ -60,12 +88,18 @@ class _RideStepsScreenState extends State<RideStepsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(
-            height: 220,
-            child: MapBackground(
-              showRoute: true,
-              showCar: true,
-              showPin: false,
+          Container(
+            height: 150,
+            color: context.palette.brandSoft,
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.navigation, size: 42),
+                  SizedBox(height: 8),
+                  Text('Навигация строится в Яндекс Навигаторе или 2ГИС'),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -102,6 +136,36 @@ class _RideStepsScreenState extends State<RideStepsScreen> {
                   active: _activeStop == 2,
                 ),
                 const SizedBox(height: 16),
+                PrimaryButton(
+                  label: 'Открыть маршрут в Яндекс / 2ГИС',
+                  kind: PrimaryButtonKind.outline,
+                  onPressed: order == null
+                      ? null
+                      : () {
+                          final toDropoff = _step >= 2;
+                          showExternalNavigationPicker(
+                            context,
+                            destination: toDropoff ? order.to : order.from,
+                            latitude: toDropoff
+                                ? order.dropoffLat
+                                : order.pickupLat,
+                            longitude: toDropoff
+                                ? order.dropoffLon
+                                : order.pickupLon,
+                          );
+                        },
+                ),
+                const SizedBox(height: 10),
+                PrimaryButton(
+                  label: _step < 2
+                      ? 'Исправить точку посадки на карте'
+                      : 'Исправить пункт назначения на карте',
+                  kind: PrimaryButtonKind.outline,
+                  onPressed: order == null
+                      ? null
+                      : () => _correctCurrentPoint(order),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(

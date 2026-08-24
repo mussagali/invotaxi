@@ -36,6 +36,7 @@ class BackendApi {
   static const _refreshKey = 'auth.refresh';
   static const _roleKey = 'auth.role';
   static const _tutorialSeenKey = 'app.tutorial_seen';
+  static const _requestTimeout = Duration(seconds: 15);
 
   final http.Client _client;
   SharedPreferences? _preferences;
@@ -77,16 +78,7 @@ class BackendApi {
     await _preferences?.setString(_phoneKey, phone.trim());
     Map<String, dynamic>? payload;
     ApiException? loginError;
-    try {
-      payload = await _unauthenticatedPost('/auth/login', {
-        'phone': phone,
-        'password': password,
-      });
-    } on ApiException catch (error) {
-      loginError = error;
-    }
-
-    if (payload == null && AppEnv.allowDevLogin) {
+    if (AppEnv.allowDevLogin && password == '1111') {
       try {
         payload = await _unauthenticatedPost('/auth/dev-login', {
           'phone': phone,
@@ -94,7 +86,19 @@ class BackendApi {
           'role': role,
         });
       } on ApiException catch (error) {
-        if (error.statusCode != 404) rethrow;
+        // A disabled test-registration endpoint is normal for a production
+        // server. Continue with the standard account login in that case.
+        if (error.statusCode != 404) loginError = error;
+      }
+    }
+    if (payload == null) {
+      try {
+        payload = await _unauthenticatedPost('/auth/login', {
+          'phone': phone,
+          'password': password,
+        });
+      } on ApiException catch (error) {
+        loginError = error;
       }
     }
     if (payload == null) {
@@ -221,6 +225,36 @@ class BackendApi {
     );
   }
 
+  Future<Map<String, dynamic>> correctOrderAddress({
+    required String orderId,
+    required bool pickup,
+    required Place place,
+  }) async {
+    final lat = place.lat;
+    final lon = place.lon;
+    if (lat == null || lon == null) {
+      throw const ApiException('Выберите точку на карте');
+    }
+    return Map<String, dynamic>.from(
+      await _request(
+            'PATCH',
+            '/orders/$orderId',
+            body: pickup
+                ? {
+                    'pickup_addr': place.displayName,
+                    'pickup_lat': lat,
+                    'pickup_lon': lon,
+                  }
+                : {
+                    'dropoff_addr': place.displayName,
+                    'dropoff_lat': lat,
+                    'dropoff_lon': lon,
+                  },
+          )
+          as Map,
+    );
+  }
+
   Future<Map<String, dynamic>> transitionDriverOrder(
     String orderId,
     String status,
@@ -332,13 +366,32 @@ class BackendApi {
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await _client.post(
-      Uri.parse('$baseUrl$path'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    final response = await _sendUnauthenticatedPost(path, body);
     final decoded = _decode(response);
     return Map<String, dynamic>.from(decoded as Map);
+  }
+
+  Future<http.Response> _sendUnauthenticatedPost(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      return await _client
+          .post(
+            Uri.parse('$baseUrl$path'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(_requestTimeout);
+    } on TimeoutException {
+      throw const ApiException(
+        'Сервер не отвечает. Проверьте интернет и повторите попытку.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'Нет соединения с сервером. Проверьте интернет.',
+      );
+    }
   }
 
   Future<dynamic> _request(
@@ -356,13 +409,26 @@ class BackendApi {
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode(body);
     }
-    final response = await http.Response.fromStream(
-      await _client.send(request),
-    );
+    final response = await _sendAuthenticatedRequest(request);
     if (response.statusCode == 401 && retry && await _refresh()) {
       return _request(method, path, body: body, retry: false);
     }
     return _decode(response);
+  }
+
+  Future<http.Response> _sendAuthenticatedRequest(http.Request request) async {
+    try {
+      final streamed = await _client.send(request).timeout(_requestTimeout);
+      return await http.Response.fromStream(streamed).timeout(_requestTimeout);
+    } on TimeoutException {
+      throw const ApiException(
+        'Сервер не отвечает. Проверьте интернет и повторите попытку.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        'Нет соединения с сервером. Проверьте интернет.',
+      );
+    }
   }
 
   dynamic _decode(http.Response response) {

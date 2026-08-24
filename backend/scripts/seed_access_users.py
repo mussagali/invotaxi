@@ -26,6 +26,18 @@ ACCESS_USERS = (
 )
 
 
+ACCESS_USERS = tuple(
+    (
+        phone,
+        full_name,
+        UserRole.admin
+        if phone in {"+77755777584", "+77753454748"}
+        else UserRole.dispatcher,
+    )
+    for phone, full_name, _role in ACCESS_USERS
+)
+
+
 async def seed(session: AsyncSession) -> None:
     for raw_phone, full_name, role in ACCESS_USERS:
         phone = normalize_phone(raw_phone)
